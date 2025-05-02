@@ -1,0 +1,46 @@
+WSL 환경에서 Python Kivy 앱을 Android로 빌드
+
+1. WSL 환경 준비
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip git unzip zip openjdk-17-jdk python3.10-venv
+
+2. 프로젝트 폴더 생성
+mkdir lotto_app && cd lotto_app
+python3 -m venv myenv
+source myenv/bin/activate
+
+3. 필수 패키지 설치
+pip install --upgrade pip
+pip install buildozer
+( WSL 재부팅 후 buildozer 명령어 사라졌다면 pip install buildozer 다시 실행)
+
+4. Kivy 프로젝트 초기화
+buildozer init
+( buildozer.spec 파일이 생성됨 → 이 파일에서 requirements = python3,kivy 등 수정 필요)
+
+5. main.py 생성
+( 프로젝트 폴더 안에 main.py와 사용할 소스들이 있어야 함.)
+
+6. buildozer.spec 수정
+source.include_exts = py,png,jpg,kv,atlas,ttf
+
+7. 클린 후 빌드
+buildozer android clean     # 이전 빌드 찌꺼기 제거
+buildozer android debug     # APK 생성
+( 생성된 APK는 ./bin/ 폴더)
+
+8. APK 확인 및 설치
+apk꺼내서 구글드라이브 
+드라이브에서 apk다운받고 앱 설치
+cd
+----------빌드 요약----------
+파워셀 wsl(wsl -d Ubuntu) ->
+cd 작업파일로 이동
+source myenv/bin/activate         # 가상환경 진입
+buildozer android clean           # 클린 빌드 준비
+buildozer android debug           # APK 빌드
+adb install ./bin/*.apk           # APK 설치 (옵션)
+
+[wsl]
+[id yuuki]
+[pw password]

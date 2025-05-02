@@ -1,0 +1,447 @@
+SDL2_image 라이브러리의 서브모듈 중 일부가 GitHub에서 다운로드되지 않아서 빌드 실패한 상황.
+
+WSL2에서 GitHub 접속 안 될 때 해결
+아래 명령어로 DNS 문제를 해결할 수 있음. 
+
+echo "[network]" | sudo tee -a /etc/wsl.conf
+echo "generateResolvConf = false" | sudo tee -a /etc/wsl.conf
+sudo rm /etc/resolv.conf
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+그리고 WSL 재시작:
+
+(파워셀)
+wsl --shutdown
+이후 다시 빌드 시도:
+
+buildozer android debug
+
+뭐가 안깔려있다고 빌드 실패한적이 많았다. 
+패키지 설치하면 그 다음 에러가 뜨고... 설치하면 또 그 다음 에러가 뜨고... 
+
+# Android packaging done!
+# APK myapp-0.1-arm64-v8a_armeabi-v7a-debug.apk available in the bin directory
+
+성공했으니 이제 파이썬으로 언제든지 앱을 만들수 있다.
+
+dns 설정도 잘되있는데, github 접속오류가 뜰때.
+
+
+다른거 다 끄고 빌드만 한다. 
+다른거 켜두고 하면 인터넷오류가 잘뜨는듯. 
+다끄고 빌드만 켜면 접속오류는 해결됨.  
+
+----------
+
+한글깨짐현상. 
+
+스피너의 드롭다운에서는 깨져보이지만 선택하면 한글로 잘 보인다. 
+
+Spinner에서 선택하기 전 목록(드롭다운)이 깨지고,
+선택한 항목은 정상적으로 한글로 보인다는 건,
+Spinner의 "dropdown 내부 텍스트"에 폰트가 적용되지 않아서 생기는 문제입니다.
+
+Kivy의 Spinner는 내부적으로 드롭다운 항목을 **DropDown + Button**으로 구성해요.
+하지만 이 항목(Button)에 기본 폰트가 적용되어 있어 **한글이 안 보이고 깨짐(□)**이 되는 거예요.
+
+해결 방법: Spinner의 option_cls를 재정의해서 한글 폰트 지정하기라는데 안되서 
+그냥 암호종류는 영어로 출력하기로 함. 
+
+----------
+
+앱이 실행안됨. 
+아마 한꺼번에 화면들이 로딩되면서 메모리 초과로 앱이 강제종료 된것같음. 
+
+1. 리소스 용량 과다
+이미지, 배경음악, 효과음 등의 리소스 파일이 너무 많거나 용량이 클 경우 메모리를 초과할 수 있어.
+
+특히 고해상도 이미지나 대용량 MP3, WAV 파일이 문제를 일으킬 수 있어.
+
+✅ 해결 팁:
+
+이미지: PNG 대신 WebP 사용하거나 해상도 줄이기.
+
+사운드: MP3 대신 OGG 사용 + 비트레이트 줄이기.
+
+🔍 2. 메모리 누수 or 과다한 위젯 로딩
+앱 시작 시 너무 많은 위젯이나 스크린, 이미지 등을 한꺼번에 로딩하면 메모리 초과로 앱이 강제 종료될 수 있어.
+
+✅ 해결 팁:
+
+ScreenManager를 사용할 때, 필요한 스크린만 로딩하도록 구현해.
+
+필요 없는 이미지는 사용 후 remove_widget()이나 texture = None 등으로 해제.
+
+🔍 3. Kivy 로그 확인
+앱이 왜 꺼지는지는 로그를 확인하는 게 가장 정확해.
+
+✅ 확인 방법 (Android 기준):
+
+buildozer android logcat 명령어로 실행 로그 확인 가능.
+
+🔍 4. buildozer.spec 파일 확인
+buildozer.spec에 불필요한 source.include_exts, requirements, android.permissions 등을 너무 많이 넣으면 문제가 될 수 있음.
+
+🔍 5. 폰 자체의 자원 부족
+테스트하는 폰이 오래되었거나, 램이 부족하면 앱이 실행되자마자 꺼질 수 있어.
+
+
+앱 구조 변경. 
+기존엔 앱 실행하자마자 모든 화면을 메모리에 올린다. 
+실패. 계속 꺼짐. 
+
+로그를 봐야할거같아서 Pydroid로 .py파일 실행. 
+오류. Crypto 모듈이 없어서 발생
+
+앱에 암호모듈이 없어서 꺼진걸까
+
+buildozer.spec에서 보안모듈 추가
+requirements = python3,kivy,pycryptodome
+
+빌드에 포함시키고 다시 시도.
+해결됨. 
+암호모듈이 포함되지 않아서 꺼졌던거같다.
+
+----------
+ AttributeError: 'CipherApp' object has no attribute 'rsa_pubkey_label'
+self.rsa_pubkey_label이라는 변수가 정의되지 않은 상태인데 접근하려고 해서 발생했어요.
+이런 식으로 self.rsa_pubkey_label로 선언하지 않고, 그냥 rsa_pubkey_label로만 만들었기 때문에,
+self.가 붙어야 인스턴스의 속성으로 저장되고, 나중에 접근할 수 있어야 합니다!
+
+self.변수명	이 클래스(화면 전체)의 속성, 다른 메소드에서도 접근 가능
+그냥 변수명	현재 함수 안에서만 존재, 다른 함수에서는 사용 불가
+
+----------
+
+self_key_input_layout을 바꿔야 되는데 
+self_key_input을 바꿔서 스피너가 먹통됨. 
+
+self.group_spinner.bind(text=self.on_group_select)를 지워버려서 스피너가 먹통된것도 있음. 
+
+---------- 또 앱이 바로 꺼진다. 
+
+requirements = python3,kivy,pycryptodome,requests,beautifulsoup4
+✅ 요약
+
+python3, kivy → 기본 필수
+
+pycryptodome → 암호화 (AES, DES, RSA)
+
+requests → 웹 페이지 가져오기
+
+beautifulsoup4 → 웹 페이지 분석 (BeautifulSoup)
+
+필요한 패키지가 없어서 그런걸까? 
+
+
+휴대폰 usb디버깅으로 로그를 봤다. 
+adb devices 로 연결된 디바이스 확인
+adb logcat
+폰에서 일어나는 모든 로그
+파이썬앱이니까 파이썬 관련 로그만 보기 
+adb logcat | findstr python
+
+04-28 16:27:43.298 23997 24035 I python  :  ModuleNotFoundError: No module named 'typing_extensions'
+04-28 16:27:43.298 23997 24035 I python  : Python for android ended.
+
+typing_extensions라는 Python 모듈을 찾을 수 없어서 앱이 꺼진 거야.
+
+이 모듈은 Python에서 타입 힌트(타입 어노테이션) 지원을 확장해주는 라이브러리야.
+
+특히, 최신 라이브러리(pycryptodome, requests, beautifulsoup4 같은)들이 내부에서 이걸 사용할 수 있어.
+
+requirements = python3,kivy,pycryptodome,requests,beautifulsoup4,typing_extensions
+
+완료. 이제 안꺼지고 잘된다
+
+
+-----
+Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at ...>")
+ 앱이 네트워크 통신(크롤링)하려다가 실패했을 때 나오는 에러야.
+
+Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at ...>")
+뜻은:
+
+인터넷에 연결하려고 했는데
+
+DNS(도메인 이름 해석)가 실패했다는 거야.
+
+원인	설명
+인터넷 연결이 불안정	Wi-Fi 꺼졌거나, 데이터 꺼졌거나
+앱이 네트워크 권한 없음	안드로이드 빌드할 때 인터넷 권한을 안 줬을 때 (특히 APK 만들었으면 주의)
+
+android.permissions에 INTERNET 권한을 줬어야 해!
+
+✅ buildozer.spec 파일 수정 필요:
+
+plaintext
+복사
+편집
+android.permissions = INTERNET
+
+----------
+Kivy에서 텍스트 크기 조정하는 공식 방법
+
+방법	설명
+dp() 사용	다양한 해상도에서도 비율 맞추는 단위
+sp() 사용 (글꼴 사이즈 전용)	텍스트 크기를 기기 스케일에 맞게 더 정확히 조정
+
+단위	용도
+dp()	버튼, 레이아웃 사이즈 등
+sp()	텍스트 폰트 사이즈에 최적화됨 (user 설정 폰트 스케일도 반영)
+
+----------
+Spinner 자체는 font_name='Font'를 써서,
+선택된 텍스트에는 폰트를 적용했지만,
+리스트 안의 항목들(드롭다운 메뉴 항목) 은 별도 폰트 설정이 안 되어 있어서 그래.
+그래서 드롭다운목록에 한글들이 깨져나오는것. 
+
+from kivy.uix.spinner import SpinnerOption
+
+# 드롭다운에 한글폰트 적용된 옵션
+class KoreanSpinnerOption(SpinnerOption):
+    font_name = 'Font'  # ✅ 네가 등록한 한글 폰트
+    font_size = sp(20)
+
+커스텀 spinner만들고 
+
+그리고 Spinner 생성할 때 option_cls=KoreanSpinnerOption을 추가해줘.
+
+from kivy.uix.spinner import Spinner
+
+self.group_spinner = Spinner(
+    text='암호화 종류 선택',
+    values=tuple(self.algorithm_groups.keys()),
+    font_name='Font',
+    font_size=sp(20),
+    option_cls=KoreanSpinnerOption,  # ✅ 여기!
+    size_hint=(0.5, 1),
+    height=dp(50)
+)
+
+해결완료.
+
+-----
+
+앱테스트
+
+1. 로또화면 글자크기가 너무 커서 버튼을 넘는다. 
+완료?
+
+2. 암호화면 키 입력부분이 암호화 스피너를 침범한다. + 암호화할떄 깨지는 부분있음. (고전 암호 CAESER에서 발생)
+해결?
+
+
+
+3. rsa 암호화할때 갑자기 꺼진다. 
+04-28 22:52:01.435  9695  9734 I python  :  AttributeError: 'CipherApp' object has no attribute 'rsa_public_key'
+04-28 22:52:01.435  9695  9734 I python  : Python for android ended.
+해결.
+
+4. 로또화면 최신 로또 가져올때 갑자기 꺼진다. 
+04-28 22:49:31.676  7703  7733 I python  :  NotImplementedError: Cannot execute CSS selectors because the soupsieve package is not installed.
+04-28 22:49:31.676  7703  7733 I python  : Python for android ended.
+해결?
+
+5. aes 키없을때 기본키로 되야하는데 암호화가 안된다.
+(이건 pc에서도 발생)  
+해결.
+
+
+-------------------------
+3번 이슈
+암호화 실패: 'CipherApp' object has no attribute 'rsa_key'
+self.rsa_key가 없다고 오류가 나고 있어.
+self.rsa_key = RSA.generate(2048) 이 초기화 코드가
+앱을 껐다 켜면 살아있지 않고, 사라지는 거야.
+
+그리고 네 코드에서는 "공개키 입력이 없으면 기본 rsa_key를 쓸래"라고 했는데,
+그 기본 rsa_key가 없어서 오류가 난 것.
+
+__init__() 안에 무조건 넣어야 해.
+
+예를 들어:
+
+from Crypto.PublicKey import RSA
+
+class CipherApp(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        self.rsa_key = RSA.generate(2048)  # ⭐ 무조건 있어야 해
+
+4번 이슈
+PC에서는 bs4가 soupsieve를 자동 설치해서 CSS 선택자(.select(), .select_one())를 사용할 수 있지만,
+안드로이드용 빌드에서는 soupsieve가 포함되지 않아 오류가 발생합니다.
+
+좋습니다! 아래 코드에서 문제가 되는 부분은 .select() 와 .select_one() 사용인데, soupsieve가 없으면 Android 앱에서는 작동하지 않아요.
+
+이를 모두 .find()와 .find_all()로 바꾸면 문제 없이 작동합니다.
+
+def fetch_lotto_numbers(self, instance):
+    try:
+        url = "https://dhlottery.co.kr/gameResult.do?method=byWin"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # ✅ 회차 정보
+        round_info = soup.find("div", class_="win_result").find("strong").text
+
+        # ✅ 당첨 번호
+        win_div = soup.find("div", class_="num win")
+        numbers = [int(span.text) for span in win_div.find_all("span")]
+
+        # ✅ 보너스 번호
+        bonus_div = soup.find("div", class_="num bonus")
+        bonus_number = int(bonus_div.find("span").text)
+
+        self.lotto_numbers = numbers
+        self.bonus_number = bonus_number
+
+        result_text = f"{round_info}\n당첨 번호: {', '.join(map(str, numbers))}\n보너스 번호: {bonus_number}"
+        self.result_label.text = result_text
+
+    except requests.exceptions.RequestException:
+        self.result_label.text = "인터넷 연결을 확인하세요 🌐"
+    except Exception as e:
+        self.result_label.text = f"로또 정보 처리 중 오류: {str(e)}"
+
+5번 이슈
+AES_DEFAULT_KEY는 16바이트로 선언돼 있지만, 문제가 되는 핵심은 이 줄입니다:
+여기서 self.key_input.text가 **공백 문자(예: ' ' 또는 '\n')**일 경우에도 key_input이 존재한다고 간주되어, AES.new() 호출 시 잘못된 길이의 키로 넘어가 오류가 나는 거예요.
+
+key_input = self.key_input.text.encode('utf-8')
+key = key_input if key_input else AES_DEFAULT_KEY
+
+.strip()을 사용해 공백 제거
+key_input = self.key_input.text.strip().encode('utf-8')
+key = key_input if key_input else AES_DEFAULT_KEY
+이렇게 하면 사용자가 아무 입력 없이 빈칸만 입력했을 경우도 기본 키로 처리되어 오류를 방지할 수 있습니다.
+
+아니었다. 
+
+기본키가 17바이트로 입력되있어서 AES 키는 16, 24 또는 32바이트여야 합니다 라는 오류가 나왔던것.
+
+2번 이슈
+height=44에서 
+height=dp(50)으로 키값 입력창 높이 변경.
+
+카이사르 암호화에서 한글이 깨지는 이유는 ord()와 chr() 함수가 256 범위(0~255)로 순환되도록 처리하고 있기 때문입니다. 이 방식은 영문 및 아스키 문자에는 적절하지만, 한글(유니코드 U+AC00 이상)은 깨질 수밖에 없습니다.
+1114112는 파이썬에서 지원하는 최대 유니코드 값입니다 (0x10FFFF + 1).
+범위를 1114112로 늘려서 암호화.
+
+그냥 3칸씩 미는 암호화라 간단함. 
+
+
+오후 5:25 2025-04-29(화)
+
+1. 로또 부분 저장번호랑 당첨결과 문자열 크기 똑같이 만들기. 
+서로 달라서 이상해보임. 
+
+2. 아이콘은 잘 들어갔는데 앱 이름이 안들어갔음. 
+MY Application 그대로야. 
+
+3. 로고 이미지 추가해서 메인에 붙이자. 
+
+
+
+#!/bin/sh
+
+set -e
+
+cd "$(dirname "$0")"/..
+
+cat .gitmodules | \
+while true; do
+    read module || break
+    read line; set -- $line
+    path=$3
+    read line; set -- $line
+    url=$3
+    read line; set -- $line
+    branch=$3
+
+    if [ -d "$path" ]; then
+        echo "폴더 '$path' 가 이미 존재합니다. 건너뜁니다."
+        continue
+    fi
+
+    echo "Cloning $url into $path (branch: $branch)..."
+    git clone "$url" "$path" -b "$branch" --recursive
+done
+
+
+
+
+buildozer.spec 파일을 수정한 후에도 전체 buildozer android clean을 하지 않고,
+최소한만 삭제해서 빠르게 반영하는 방법을 정리해드릴게요.
+
+✅ 상황별 최소 삭제 전략
+수정한 항목	최소 삭제 대상	설명
+requirements 변경	.buildozer/ 내 python-installs/, dists/	파이썬 의존성 다시 설치됨
+android.add_aars, android.add_src, android.gradle_dependencies 등 Java 관련 변경	dists/ 폴더만 삭제	Java 리빌드만 다시 진행
+package.name, package.domain, version, icon.filename 등 앱 메타정보	bin/, dists/ 삭제	APK 재생성에 영향 있음
+android.permissions, meta_data, android.manifest_placeholders 등 Android 매니페스트 관련 항목	dists/	앱 구조 바뀌므로 rebuild 필요
+단순 log_level, orientation 등 UI 설정	보통 삭제 없이도 가능	일부 항목은 바로 반영됨
+
+
+Buildozer가 외부 라이브러리를 클론할 때 사용하는 기본 경로는 
+\\wsl.localhost\Ubuntu\home\yuuki\lotto_app\.buildozer\android\platform\build-arm64-v8a_armeabi-v7a\build\bootstrap_builds\sdl2\jni\SDL2_image\external
+
+맞습니다. 수동으로 external/jpeg 폴더를 넣었더라도, download.sh가 강제로 git clone을 시도하면서 충돌이 납니다. 이걸 막으려면 단순히 폴더만 넣는 걸로는 부족하고 빌드시 실행되는 스크립트를 우회하거나 수정해야 합니다.
+
+🔧 해결 방법: download.sh에서 강제 clone 제거
+터미널에서 문제의 스크립트 열기:
+
+bash
+복사
+편집
+nano .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/bootstrap_builds/sdl2/jni/SDL2_image/external/download.sh
+안에 보면 이런 부분이 있을 겁니다:
+
+bash
+복사
+편집
+git clone --depth 1 https://github.com/libsdl-org/jpeg.git external/jpeg
+해당 줄을 주석 처리하거나 삭제하세요:
+
+bash
+복사
+편집
+# git clone --depth 1 https://github.com/libsdl-org/jpeg.git external/jpeg
+저장 후 다시 빌드:
+
+bash
+복사
+편집
+buildozer android debug
+
+
+
+✅ 해결 방법 1: 스크립트 수정해서 이미 존재하는 디렉토리는 건너뛰기
+스크립트를 다음처럼 수정하세요 (git clone 전에 디렉토리 존재 여부 확인):
+
+sh
+복사
+편집
+#!/bin/sh
+
+set -e
+
+cd $(dirname "$0")/..
+cat .gitmodules | \
+while true; do
+    read module || break
+    read line; set -- $line
+    path=$3
+    read line; set -- $line
+    url=$3
+    read line; set -- $line
+    branch=$3
+    if [ ! -d "$path" ]; then
+        git clone $url $path -b $branch --recursive
+    else
+        echo "Directory $path already exists, skipping clone."
+    fi
+done

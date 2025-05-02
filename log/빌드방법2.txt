@@ -1,0 +1,23 @@
+키파일 패스워드 : mypass123
+플레이 스토어에 올릴때는 apk대신 aab를 올려야하고. 키파일로 서명도 해줘야 한다. 
+
+키파일있는 곳에서
+jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256   -keystore my-release-key.keystore   bin/encrycode-release.aab mykey
+치고 패스워드 입력하면 /bin 안에 있는 패키지파일에 서명이 들어간다. 
+
+\.buildozer\android\platform\build-arm64-v8a_armeabi-v7a\dists\encrycode
+에 build.gradle 이 있는데
+여기서 지원버전?을 수정가능. 
+
+기존의 buildozer로(buildozer android release aab)
+빌드하면 설정한 버전이 31로 강제 변경되서 
+
+cd .buildozer/android/platform/build-arm64*/dists/encry*/ 
+여기로 이동하고
+./gradlew bundleRelease
+로 빌드한다.
+
+\.buildozer\android\platform\build-arm64-v8a_armeabi-v7a\dists\encrycode\build\outputs\bundle\release
+그럼 여기에 aab 파일이 나온다. 
+
+
