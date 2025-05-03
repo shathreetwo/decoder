@@ -2,3 +2,6 @@ SecretDecoder 1.0.0 : 전면 광고 기능 추가, 비공개 테스트용 빌드
 
 SecretDecoder 1.0.1 : 로비 화면 디자인 개선, 텍스트 입력창 줄바꿈 처리 오류 수정
 
+SecretDecoder 1.1.0(예정) : 메모장 기능 추가, 암호 알고리즘 확장 ( 해시 MD5, 대칭키 ChaCha20 )
+
+

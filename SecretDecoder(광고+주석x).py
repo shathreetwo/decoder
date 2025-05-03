@@ -31,6 +31,14 @@ from jnius import autoclass, cast
 from android import activity
 from android.runnable import run_on_ui_thread
 
+from kivy.core.text import LabelBase
+from datetime import datetime
+from kivy.core.window import Window
+from kivy.uix.popup import Popup
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
+from cryptography.hazmat.backends import default_backend
+from Crypto.Cipher import ChaCha20
+
 
 LabelBase.register(name='Font', fn_regular='NotoSansKR.ttf')
 
@@ -82,16 +90,34 @@ class MainScreen(Screen):
         layout.add_widget(spy_image)
 
 
-        btn3 = Button(text='암호문', font_name='Font', font_size=sp(28),
+
+
+
+        
+
+        btn1 = Button(text='암호문', font_name='Font', font_size=sp(28),
                       size_hint_y=None, height=dp(80))
-        btn3.bind(on_press=self.show_ad_and_switch)
-        layout.add_widget(btn3)
+        btn2 = Button(text='메모장', font_name='Font', font_size=sp(28),
+                      size_hint_y=None, height=dp(80))
+
+
+        
+        btn1.bind(on_press=self.show_ad_and_switch)
+        btn2.bind(on_press=self.show_ad_and_switch)
+
+
+        layout.add_widget(btn1)
+        layout.add_widget(btn2)
 
         self.add_widget(layout)
 
-    def show_ad_and_switch(self, instance):
+    def show_ad_and_switch1(self, instance):
         show_admob(self.current_activity)
         App.get_running_app().switch_to_screen('encry')
+
+    def show_ad_and_switch2(self, instance):
+        show_admob(self.current_activity)
+        App.get_running_app().switch_to_screen('memo')
 
 
 
@@ -107,9 +133,9 @@ class CipherApp(Screen):
         super().__init__(**kwargs)
 
         self.algorithm_groups = {
-            '대칭키 암호화': ['AES', 'DES'],
+            '대칭키 암호화': ['AES', 'DES', 'ChaCha20'],
             '비대칭키 암호화': ['RSA'],
-            '해시': ['SHA-256'],
+            '해시': ['SHA-256', 'MD5'],
             '고전 암호': ['Caesar', 'Reverse'],
             '인코딩': ['Base64', 'ASCII', 'Unicode']
         }
@@ -301,7 +327,7 @@ class CipherApp(Screen):
         elif algo == 'AES':
             result = self.aes_encrypt(plain)
         elif algo == 'Reverse':
-            result = plain[::-1]  
+            result = plain[::-1]  # 문자열 뒤집기
         elif algo == 'DES':
             result = self.des_encrypt(plain)
         elif algo == 'RSA':
@@ -311,11 +337,16 @@ class CipherApp(Screen):
             result = self.hash_text_sha256(plain)
 
         elif algo == 'ASCII':
-            result = ' '.join(str(ord(c)) for c in plain)  
+            result = ' '.join(str(ord(c)) for c in plain)  # ex: "A" → "65"
 
         elif algo == 'Unicode':
-            result = ' '.join(f'U+{ord(c):04X}' for c in plain)  
-    
+            result = ' '.join(f'U+{ord(c):04X}' for c in plain)  # ex: "가" → "U+AC00"
+
+        elif algo == 'MD5':
+            result = self.hash_text_md5(plain)
+        elif algo == 'ChaCha20':
+            result = self.chacha20_encrypt(plain)
+            
         else:
             result = "지원되지 않는 알고리즘입니다."
             
@@ -332,13 +363,14 @@ class CipherApp(Screen):
             elif algo == 'AES':
                 result = self.aes_decrypt(cipher)
             elif algo == 'Reverse':
-                result = cipher[::-1]  
+                result = cipher[::-1]  # 뒤집으면 복호화
             elif algo == 'DES':
                 result = self.des_decrypt(cipher)
             elif algo == 'RSA':
                 result = self.rsa_decrypt(cipher)
             elif algo == 'SHA-256':
                 result = "해시는 복호화가 불가능합니다."
+            
             elif algo == 'ASCII':
                 try:
                     result = ''.join(chr(int(code)) for code in cipher.strip().split())
@@ -350,6 +382,11 @@ class CipherApp(Screen):
                     result = ''.join(chr(int(code.replace("U+", ""), 16)) for code in cipher.strip().split())
                 except:
                     result = "형식 오류: U+로 시작하는 유니코드 값이어야 합니다."
+
+            elif algo == 'MD5':
+                result = "해시는 복호화가 불가능합니다."
+            elif algo == 'ChaCha20':
+                result = self.chacha20_decrypt(cipher)
                 
             else:
                 result = "지원되지 않는 알고리즘입니다."
@@ -357,7 +394,7 @@ class CipherApp(Screen):
             self.decrypted_output.text = f"평문: {result}"
         except Exception:
             self.decrypted_output.text = "복호화 오류: 형식을 확인하세요."
-
+            
     def copy_to_clipboard(self, instance):
         text = self.encrypted_output.text.replace("암호문: ", "")
         Clipboard.copy(text)
@@ -460,6 +497,61 @@ class CipherApp(Screen):
 
     def hash_text_sha256(self, text):
         return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+
+    def hash_text_md5(self, text):
+        import hashlib
+        return hashlib.md5(text.encode('utf-8')).hexdigest()
+
+    def chacha20_encrypt(self, plaintext):
+        key_input_str = self.key_input.text.strip()
+
+        try:
+            if key_input_str:
+                key = base64.b64decode(key_input_str)
+                include_key = False  
+            else:
+                key = get_random_bytes(32)
+                include_key = True  
+        except Exception:
+            return "키 형식이 잘못되었습니다. Base64로 인코딩된 문자열을 입력하세요."
+
+        if len(key) != 32:
+            return "ChaCha20 키는 정확히 32바이트여야 합니다."
+
+        nonce = get_random_bytes(12)
+        cipher = ChaCha20.new(key=key, nonce=nonce)
+        ciphertext = cipher.encrypt(plaintext.encode('utf-8'))
+
+        if include_key:
+            combined = nonce + key + ciphertext
+        else:
+            combined = nonce + ciphertext
+
+        return base64.b64encode(combined).decode('utf-8')
+
+
+    def chacha20_decrypt(self, encoded_ciphertext):
+        try:
+            raw = base64.b64decode(encoded_ciphertext)
+            nonce = raw[:12]
+            key_input_str = self.key_input.text.strip()
+
+            if key_input_str:
+                key = base64.b64decode(key_input_str)
+                if len(key) != 32:
+                    return "ChaCha20 키는 정확히 32바이트여야 합니다."
+                ciphertext = raw[12:]
+            else:
+                key = raw[12:44]
+                ciphertext = raw[44:]
+
+            cipher = ChaCha20.new(key=key, nonce=nonce)
+            plaintext = cipher.decrypt(ciphertext).decode('utf-8')
+            return plaintext
+        except Exception:
+            return "복호화 실패"
+
     
     def on_group_select(self, spinner, text):
         self.algo_spinner.values = self.algorithm_groups[text]
@@ -499,19 +591,203 @@ class CipherApp(Screen):
 
 
 
+class MemoScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+
+        title_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
+
+        self.title_input = TextInput(
+            hint_text='메모 제목 입력...없으면 날짜 저장',
+            multiline=False,
+            font_name='Font',
+            size_hint_x=0.7,
+            font_size=16
+        )
+        new_btn = Button(text='새 메모', size_hint_x=0.3,  font_name='Font')
+        new_btn.bind(on_press=self.new_memo)
+
+        title_layout.add_widget(self.title_input)
+        title_layout.add_widget(new_btn)
+
+        layout.add_widget(title_layout)
+
+        self.memo_spinner = Spinner(
+            text='메모 선택',
+            values=[],
+            size_hint_y=None,
+            height=dp(40),
+            font_name='Font',
+            option_cls=KoreanSpinnerOption
+        )
+        self.memo_spinner.bind(text=self.select_memo)
+        layout.add_widget(self.memo_spinner)
+
+        self.memo_input = TextInput(
+            hint_text='메모를 입력하세요...',
+            multiline=True,
+            size_hint_y=0.7,
+            font_size=18,
+            font_name='Font'
+        )
+        layout.add_widget(self.memo_input)
+
+        btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
+
+        save_btn = Button(text='저장', font_name='Font')
+        load_btn = Button(text='불러오기', font_name='Font')
+        delete_btn = Button(text='삭제', font_name='Font')
+
+        save_btn.bind(on_press=self.save_memo)
+        load_btn.bind(on_press=self.load_memo)
+        delete_btn.bind(on_press=self.delete_memo)
+
+        btn_layout.add_widget(save_btn)
+        btn_layout.add_widget(load_btn)
+        btn_layout.add_widget(delete_btn)
+
+        layout.add_widget(btn_layout)
+
+        self.status_label = Label(text='', size_hint_y=None, height=dp(30), font_name='Font')
+        layout.add_widget(self.status_label)
+
+        
+        back_button = Button(
+            text='← 뒤로가기',
+            font_name='Font',
+            font_size=sp(20),
+            size_hint=(1, None),
+            height=dp(50)
+        )
+        back_button.bind(on_press=lambda x: setattr(self.manager, 'current', 'main'))
+        layout.add_widget(back_button)
+
+        self.add_widget(layout)
+
+        try:
+            from android.storage import app_storage_path
+            memo_base_path = app_storage_path()
+        except ImportError:
+            memo_base_path = os.path.join(os.path.expanduser("~"), 'AppData', 'Roaming', 'lotto')
+
+        self.memo_dir = os.path.join(memo_base_path, 'memos')
+        os.makedirs(self.memo_dir, exist_ok=True)
+
+        self.current_filename = None
+        self.memo_spinner.values = self.get_memo_list()
+
+        
+
+
+
+    def get_memo_list(self):
+        return [f for f in os.listdir(self.memo_dir) if f.endswith('.txt')]
+
+    def save_memo(self, instance):
+        if not self.current_filename:
+            self.status_label.text = '저장 실패: 메모 파일이 선택되지 않았습니다.'
+            return
+        filepath = os.path.join(self.memo_dir, self.current_filename)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(self.memo_input.text)
+        self.status_label.text = f'저장됨: {self.current_filename}'
+
+    def load_memo(self, instance):
+        if not self.current_filename:
+            self.status_label.text = '불러오기 실패: 메모를 선택해주세요.'
+            return
+        filepath = os.path.join(self.memo_dir, self.current_filename)
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                self.memo_input.text = f.read()
+            self.status_label.text = f'불러옴: {self.current_filename}'
+        else:
+            self.status_label.text = '파일이 존재하지 않습니다.'
+
+    def delete_memo(self, instance):
+        if not self.current_filename:
+            self.status_label.text = '삭제 실패: 메모를 선택해주세요.'
+            return
+
+        content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        message = Label(text=f"'{self.current_filename}' 메모를 삭제하시겠습니까?", font_name='Font')
+        btn_box = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
+
+        yes_btn = Button(text='삭제', font_name='Font')
+        no_btn = Button(text='취소', font_name='Font')
+
+        popup = Popup(title='delete',
+                      content=content,
+                      size_hint=(0.8, 0.4),
+                      auto_dismiss=False)
+
+        def confirm_delete(instance):
+            filepath = os.path.join(self.memo_dir, self.current_filename)
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                self.status_label.text = f'삭제됨: {self.current_filename}'
+                self.memo_input.text = ''
+                self.title_input.text = ''
+                self.current_filename = None
+                self.memo_spinner.values = self.get_memo_list()
+                self.memo_spinner.text = '메모 선택'
+            else:
+                self.status_label.text = '삭제 완료.'
+            popup.dismiss()
+
+        def cancel_delete(instance):
+            self.status_label.text = '삭제 취소됨'
+            popup.dismiss()
+
+        yes_btn.bind(on_press=confirm_delete)
+        no_btn.bind(on_press=cancel_delete)
+
+        btn_box.add_widget(yes_btn)
+        btn_box.add_widget(no_btn)
+
+        content.add_widget(message)
+        content.add_widget(btn_box)
+
+        popup.open()
+
+    def new_memo(self, instance):
+        title = self.title_input.text.strip()
+        if not title:
+            title = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'{title}.txt'
+        self.current_filename = filename
+
+        self.memo_input.text = ''
+        
+        filepath = os.path.join(self.memo_dir, self.current_filename)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write('')
+
+        self.memo_spinner.values = self.get_memo_list()
+        self.memo_spinner.text = filename
+
+        self.status_label.text = f'새 메모 생성: {filename}'
+
+    def select_memo(self, spinner, text):
+        self.current_filename = text
+        self.load_memo(None)
 
 
 class LottoApp(App):
     def build(self):
         self.sm = ScreenManager()
         self.sm.add_widget(MainScreen(name='main'))
-        self.title = "SecretDecoder"  
+        self.title = "SecretDecoder"  # ← 앱 이름(제목 바꾸기)
         return self.sm
 
     def switch_to_screen(self, screen_name):
         if not self.sm.has_screen(screen_name):
             if screen_name == 'encry':
                 self.sm.add_widget(CipherApp(name='encry'))
+            elif screen_name == 'memo':
+                self.sm.add_widget(MemoScreen(name='memo'))  # 메모 화면 등록
         self.sm.current = screen_name
 
 
