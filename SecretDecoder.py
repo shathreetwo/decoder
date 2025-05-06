@@ -34,6 +34,11 @@ from kivy.uix.popup import Popup
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms
 from cryptography.hazmat.backends import default_backend
 from Crypto.Cipher import ChaCha20
+from Crypto.Cipher import Blowfish
+from Crypto.Util.Padding import pad, unpad
+from Crypto.Cipher import DES3
+
+
 
 # 📌 폰트 등록 (파일이 프로젝트 폴더에 있어야 함)
 LabelBase.register(name='Font', fn_regular='NotoSansKR.ttf')
@@ -47,6 +52,10 @@ DES_BLOCK_SIZE = 8
 
 AES_DEFAULT_KEY = b'myaesdefaultkey1'   # 16바이트
 DES_DEFAULT_KEY = b'deskey88'            # 8바이트
+
+BLOWFISH_BLOCK_SIZE = Blowfish.block_size  # 일반적으로 8바이트
+TDES_BLOCK_SIZE = DES3.block_size  # 일반적으로 8바이트
+
 
 
 
@@ -106,11 +115,11 @@ class CipherApp(Screen):
         super().__init__(**kwargs)
 
         self.algorithm_groups = {
-            '대칭키 암호화': ['AES', 'DES', 'ChaCha20'],
+            '대칭키 암호화': ['ChaCha20', 'AES', 'Blowfish', '3DES', 'DES' ],
             '비대칭키 암호화': ['RSA'],
-            '해시': ['SHA-256', 'MD5'],
-            '고전 암호': ['Caesar', 'Reverse'],
-            '인코딩': ['Base64', 'ASCII', 'Unicode']
+            '해시': ['BLAKE2', 'SHA-512', 'SHA-256', 'SHA-1', 'MD5'],
+            '고전 암호': ['Caesar', 'Reverse','Vigenere'],
+            '인코딩': ['ASCII', 'Hex', 'Unicode', 'Base64', 'URL']
         }
         self.rsa_key = RSA.generate(2048)
 
@@ -301,13 +310,16 @@ class CipherApp(Screen):
             result = base64.b64encode(plain.encode('utf-8')).decode('utf-8')
         elif algo == 'AES':
             result = self.aes_encrypt(plain)
+        elif algo == 'Blowfish':
+            result = self.blowfish_encrypt(plain)
         elif algo == 'Reverse':
             result = plain[::-1]  # 문자열 뒤집기
         elif algo == 'DES':
             result = self.des_encrypt(plain)
+        elif algo == '3DES':
+            result = self.triple_des_encrypt(plain)
         elif algo == 'RSA':
             result = self.rsa_encrypt(plain)
-
         elif algo == 'SHA-256':
             result = self.hash_text_sha256(plain)
 
@@ -319,8 +331,22 @@ class CipherApp(Screen):
 
         elif algo == 'MD5':
             result = self.hash_text_md5(plain)
+        elif algo == "SHA-1":
+            result = self.hash_text_sha1(plain)
+        elif algo == "SHA-512":
+            result = self.hash_text_sha512(plain)
+        elif algo == "BLAKE2":
+            result = self.hash_text_blake2(plain)
+        elif algo == "Hex":
+            result = self.encode_text_hex(plain)
+        elif algo == "URL":
+            result = self.encode_text_url(plain)
+        
         elif algo == 'ChaCha20':
             result = self.chacha20_encrypt(plain)
+        elif algo == 'Vigenere':
+            keyword = self.key_input.text.strip() or "KEY"
+            result = self.vigenere_encrypt(plain, keyword)
             
         else:
             result = "지원되지 않는 알고리즘입니다."
@@ -335,17 +361,24 @@ class CipherApp(Screen):
                 result = self.caesar_decrypt(cipher)
             elif algo == 'Base64':
                 result = base64.b64decode(cipher.encode('utf-8')).decode('utf-8')
+            elif algo == "Hex":
+                result = self.decode_text_hex(cipher)
+            elif algo == "URL":
+                result = self.decode_text_url(cipher)
             elif algo == 'AES':
                 result = self.aes_decrypt(cipher)
+            elif algo == '3DES':
+                result = self.triple_des_decrypt(cipher)
+            elif algo == 'Blowfish':
+                result = self.blowfish_decrypt(cipher)
             elif algo == 'Reverse':
                 result = cipher[::-1]  # 뒤집으면 복호화
             elif algo == 'DES':
                 result = self.des_decrypt(cipher)
             elif algo == 'RSA':
                 result = self.rsa_decrypt(cipher)
-            elif algo == 'SHA-256':
-                result = "해시는 복호화가 불가능합니다."
-            
+            elif algo in ('SHA-1', 'SHA-256', 'SHA-512', 'BLAKE2', 'MD5'):
+                result = "해시는 복호화가 불가능합니다."        
             elif algo == 'ASCII':
                 try:
                     result = ''.join(chr(int(code)) for code in cipher.strip().split())
@@ -358,11 +391,12 @@ class CipherApp(Screen):
                 except:
                     result = "형식 오류: U+로 시작하는 유니코드 값이어야 합니다."
 
-            elif algo == 'MD5':
-                result = "해시는 복호화가 불가능합니다."
             elif algo == 'ChaCha20':
                 result = self.chacha20_decrypt(cipher)
-                
+            elif algo == 'Vigenere':
+                keyword = self.key_input.text.strip() or "KEY"
+                result = self.vigenere_decrypt(cipher, keyword)
+                            
             else:
                 result = "지원되지 않는 알고리즘입니다."
             
@@ -474,12 +508,34 @@ class CipherApp(Screen):
         return hashlib.sha256(text.encode('utf-8')).hexdigest()
 
     def hash_text_md5(self, text):
-        import hashlib
         return hashlib.md5(text.encode('utf-8')).hexdigest()
+
+    def hash_text_sha1(self, text):
+        return hashlib.sha1(text.encode('utf-8')).hexdigest()
+
+    def hash_text_sha512(self, text):
+        return hashlib.sha512(text.encode('utf-8')).hexdigest()
+
+    def hash_text_blake2(self, text):
+        return hashlib.blake2b(text.encode('utf-8')).hexdigest()
+
+    def encode_text_hex(self, text):
+        return text.encode('utf-8').hex()
+
+    def decode_text_hex(self, hex_text):
+        return bytes.fromhex(hex_text).decode('utf-8')
+
+    def encode_text_url(self, text):
+        import urllib.parse
+        return urllib.parse.quote(text)
+
+    def decode_text_url(self, url_text):
+        import urllib.parse
+        return urllib.parse.unquote(url_text)
 
     def chacha20_encrypt(self, plaintext):
         key_input_str = self.key_input.text.strip()
-
+    
         try:
             # 입력된 키가 있으면 base64 디코딩
             if key_input_str:
@@ -526,13 +582,105 @@ class CipherApp(Screen):
             return plaintext
         except Exception:
             return "복호화 실패"
+        
+    def blowfish_encrypt(self, plaintext):
+        key_input_text = self.key_input.text.strip()
+        key = key_input_text.encode('utf-8') if key_input_text else b'mydefaultkey123'  # 16바이트 정도 추천
+
+        if not (4 <= len(key) <= 56):
+            return "Blowfish 키는 4~56바이트여야 합니다."
+
+        cipher = Blowfish.new(key, Blowfish.MODE_CBC)
+        ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), BLOWFISH_BLOCK_SIZE))
+        iv = base64.b64encode(cipher.iv).decode('utf-8')
+        ct = base64.b64encode(ct_bytes).decode('utf-8')
+        return f"{iv}:{ct}"
+
+    def blowfish_decrypt(self, ciphertext):
+        try:
+            key_input_text = self.key_input.text.strip()
+            key = key_input_text.encode('utf-8') if key_input_text else b'mydefaultkey123'
+
+            if not (4 <= len(key) <= 56):
+                return "Blowfish 키는 4~56바이트여야 합니다."
+
+            iv_b64, ct_b64 = ciphertext.split(":")
+            iv = base64.b64decode(iv_b64)
+            ct = base64.b64decode(ct_b64)
+            cipher = Blowfish.new(key, Blowfish.MODE_CBC, iv)
+            pt = unpad(cipher.decrypt(ct), BLOWFISH_BLOCK_SIZE).decode('utf-8')
+            return pt
+        except Exception:
+            return "복호화 실패"
+
+    def triple_des_encrypt(self, plaintext):
+        key_input_text = self.key_input.text.strip()
+        key = key_input_text.encode('utf-8') if key_input_text else b'default3deskey1234567890'  # 16 또는 24 바이트
+
+        # 3DES 키는 반드시 16 또는 24 바이트
+        if len(key) not in [16, 24]:
+            return "3DES 키는 16 또는 24바이트여야 합니다."
+
+        cipher = DES3.new(key, DES3.MODE_CBC)
+        ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), TDES_BLOCK_SIZE))
+        iv = base64.b64encode(cipher.iv).decode('utf-8')
+        ct = base64.b64encode(ct_bytes).decode('utf-8')
+        return f"{iv}:{ct}"
+
+    def triple_des_decrypt(self, ciphertext):
+        try:
+            key_input_text = self.key_input.text.strip()
+            key = key_input_text.encode('utf-8') if key_input_text else b'default3deskey1234567890'
+
+            if len(key) not in [16, 24]:
+                return "3DES 키는 16 또는 24바이트여야 합니다."
+
+            iv_b64, ct_b64 = ciphertext.split(":")
+            iv = base64.b64decode(iv_b64)
+            ct = base64.b64decode(ct_b64)
+            cipher = DES3.new(key, DES3.MODE_CBC, iv)
+            pt = unpad(cipher.decrypt(ct), TDES_BLOCK_SIZE).decode('utf-8')
+            return pt
+        except Exception:
+            return "복호화 실패"
+
+    def vigenere_encrypt(self, plaintext, keyword):
+        result = ''
+        keyword = keyword.lower()
+        keyword_index = 0
+
+        for char in plaintext:
+            if char.isalpha():
+                shift = ord(keyword[keyword_index % len(keyword)]) - ord('a')
+                base = ord('A') if char.isupper() else ord('a')
+                result += chr((ord(char) - base + shift) % 26 + base)
+                keyword_index += 1
+            else:
+                result += char
+        return result
+
+    def vigenere_decrypt(self, ciphertext, keyword):
+        result = ''
+        keyword = keyword.lower()
+        keyword_index = 0
+
+        for char in ciphertext:
+            if char.isalpha():
+                shift = ord(keyword[keyword_index % len(keyword)]) - ord('a')
+                base = ord('A') if char.isupper() else ord('a')
+                result += chr((ord(char) - base - shift) % 26 + base)
+                keyword_index += 1
+            else:
+                result += char
+        return result
+
     
     def on_group_select(self, spinner, text):
         self.algo_spinner.values = self.algorithm_groups[text]
         self.algo_spinner.text = self.algorithm_groups[text][0]
 
     def on_algo_select(self, spinner, text):
-        key_needed_algos = ['AES', 'DES', 'ChaCha20']
+        key_needed_algos = ['ChaCha20', 'AES', 'Blowfish', '3DES', 'DES','Vigenere']
         rsa_needed_algos = ['RSA']
 
         if text in key_needed_algos:
@@ -577,7 +725,7 @@ class MemoScreen(Screen):
             multiline=False,
             font_name='Font',
             size_hint_x=0.7,
-            font_size=16
+            font_size=sp(20)
         )
         new_btn = Button(text='새 메모', size_hint_x=0.3,  font_name='Font')
         new_btn.bind(on_press=self.new_memo)
@@ -604,7 +752,7 @@ class MemoScreen(Screen):
             hint_text='메모를 입력하세요...',
             multiline=True,
             size_hint_y=0.7,
-            font_size=18,
+            font_size=sp(22),
             font_name='Font'
         )
         layout.add_widget(self.memo_input)
@@ -613,7 +761,7 @@ class MemoScreen(Screen):
         btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
 
         save_btn = Button(text='저장', font_name='Font')
-        load_btn = Button(text='불러오기', font_name='Font')
+        load_btn = Button(text='다시 불러오기', font_name='Font')
         delete_btn = Button(text='삭제', font_name='Font')
 
         save_btn.bind(on_press=self.save_memo)
@@ -772,6 +920,17 @@ class LottoApp(App):
             elif screen_name == 'memo':
                 self.sm.add_widget(MemoScreen(name='memo'))  # 메모 화면 등록
         self.sm.current = screen_name
+
+    def on_back_button(self, window, key, *args):
+        if key == 27:  # Android back key
+            current = self.sm.current
+            if current == 'main':  # 메인화면이면 앱 종료
+                return False  # 기본 동작 허용 → 앱 종료
+            else:
+                self.sm.current = 'main'  # 메인화면으로 이동
+                return True  # 기본 동작 막기
+        return False
+
 
 
 if __name__ == '__main__':

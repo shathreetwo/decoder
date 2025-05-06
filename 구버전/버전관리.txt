@@ -2,6 +2,20 @@ SecretDecoder 1.0.0 : 전면 광고 기능 추가, 비공개 테스트용 빌드
 
 SecretDecoder 1.0.1 : 로비 화면 디자인 개선, 텍스트 입력창 줄바꿈 처리 오류 수정
 
-SecretDecoder 1.1.0(예정) : 메모장 기능 추가, 암호 알고리즘 확장 ( 해시 MD5, 대칭키 ChaCha20 )
+SecretDecoder 1.1.0 : 메모장 기능 추가, 암호 알고리즘 확장 ( 해시 MD5, 대칭키 ChaCha20 )
+
+SecretDecoder 1.1.1 : 
+메모장 제목 및 내용 입력칸 가독성 개선, 
+
+- 뒤로가기 버튼 동작 개선
+  • 메인화면: 뒤로가기 누르면 앱 종료
+  • 그 외 화면: 뒤로가기 누르면 메인화면으로 전환
+
+- 암호화 알고리즘 분류 및 추가
+  • 대칭키 암호화: ChaCha20, AES, Blowfish, 3DES, DES
+  • 비대칭키 암호화: RSA
+  • 해시 함수: BLAKE2, SHA-512, SHA-256, SHA-1, MD5
+  • 고전 암호: Caesar, Reverse, Vigenère
+  • 인코딩: ASCII, Hex, Unicode, Base64, URL
 
 

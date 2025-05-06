@@ -95,28 +95,55 @@ ChaCha20은 대칭키 암호이기 때문에 "복호화를 위해 반드시 같�
 
 
 추가 암호화 알고리즘(예정)
-대칭키 암호화
-'Blowfish'
-'Triple DES (3DES)'
-'Twofish'
+'Twofish' 
+(PyCryptodome 같은 일반적인 Python 암호화 라이브러리는 Twofish를 기본 지원하지 않습니다.
+대신, twofish라는 별도의 라이브러리를 설치해서 사용해야 합니다.)
 
 비대칭키 암호화
 'ECC' (타원 곡선 암호)
-'ElGamal'
+(보류. 서명기능으로 만들어야되는데 까다로움.)
 
-해시
-'SHA-1' (보안상 취약하지만 실습용 가능)
-'SHA-512'
-'BLAKE2'
+'ElGamal'
+구현 방법 개요 (Python 기준)
+Python에서는 일반적으로 PyCryptodome이 ElGamal을 지원하지 않기 때문에
+ElGamal을 쓰려면 다음 중 하나가 필요합니다:
+
+🔧 1. pycryptodome의 실험적 ElGamal (비공식 기능, 권장되지 않음)
+python
+복사
+편집
+from Crypto.PublicKey import ElGamal
+대부분 설치된 PyCryptodome에는 ElGamal이 비활성화되어 있음
+
+🔧 2. python-gnupg + GnuPG 사용
+GPG를 통해 ElGamal 키쌍을 만들고 암호화/복호화 수행
+
+단점: 외부 명령어(GPG CLI) 필요. 모바일에서는 어렵다.
+
+🔧 3. 직접 수학적으로 구현
+소수, 원시근 생성 → 공개키/개인키 생성 → 암호화/복호화
+
+장점: 모든 환경에서 사용 가능
+단점: 구현 복잡, 처리 속도 느림
+
 
 고전 암호
-'Vigenère' (비즈네르 암호)
 'Playfair'
 'Rail Fence' (레일펜스 암호)
 'Atbash' (고대 히브리 암호)
 
-인코딩
-'Hex' (16진수 인코딩)
-'URL Encoding'
+
+오후 6:48 2025-05-06(화)
+신버전 테스트. 개선점 3가지.
+1. 메모장 제목이랑 내용 입력칸 글자가 작다. 
+font_size=sp(22) 
+해결완료?
+
+2. 뒤로가기 버튼 누르면 앱이 나가진다. 
+(휴대폰의 뒤로가기 버튼을 눌렀을 때 앱이 곧바로 종료되는 문제는 Kivy 앱에서 Android의 기본 동작을 따르기 때문입니다. 하지만 Kivy에서는 on_back_button 콜백을 오버라이드해서 이 동작을 사용자 정의할 수 있습니다.)
+해결완료?
+
+3. 암호들 소개 페이지 추가할까?
+
 
 
