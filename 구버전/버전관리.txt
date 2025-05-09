@@ -19,3 +19,5 @@ SecretDecoder 1.1.1 :
   • 인코딩: ASCII, Hex, Unicode, Base64, URL
 
 
+
+SecretDecoder 1.1.2 : "일부 기기에서 발생하던 앱 종료 문제를 수정했습니다."

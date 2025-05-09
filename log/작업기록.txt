@@ -145,5 +145,31 @@ font_size=sp(22)
 
 3. 암호들 소개 페이지 추가할까?
 
+-----
+
+베포에 올릴때, abb와 apk를 동시에 빌드해서 apk 테스트 확인하고 올릴것.
+베포 올린게 크래시나서 먹통됬다. 
+
+build.gradle에
+    buildTypes {
+        release {
+            minifyEnabled false      // 코드 난독화 설정
+            shrinkResources false    // 리소스 축소
+            debuggable false        // 디버그 기능 비활성화
+            signingConfig signingConfigs.release  // 서명 설정 연결
+        }
+        debug {
+            debuggable false         // 디버그 빌드에서는 디버그 가능 설정
+        }
+    }
+
+이부분이 문제였던것같다. 
+코드 난독화 설정, 리소스 축소가 true면 로그도 제한적으로 보이고 앱을 켜자마자 바로 꺼지는 크래시 발생.
+
+해결완료. 베포버전이 무사히 작동되는걸 확인했다. 
+
+개선사항 
+1. 암호 소개 페이지 추가. 
+2. 메모장 암호화해서 보안 메모장으로 만들기.
 
 
