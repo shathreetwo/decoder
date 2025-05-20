@@ -37,6 +37,16 @@ from Crypto.Cipher import ChaCha20
 from Crypto.Cipher import Blowfish
 from Crypto.Util.Padding import pad, unpad
 from Crypto.Cipher import DES3
+from kivy.uix.scrollview import ScrollView
+from cryptography.fernet import Fernet
+
+from kivy.core.window import Window
+
+# 앱 시작 시 키 생성 (또는 저장된 키 로드)
+# WARNING: 키는 안전하게 보관 필요
+#key = Fernet.generate_key()
+#cipher = Fernet(key)
+
 
 
 
@@ -86,9 +96,9 @@ class MainScreen(Screen):
         layout.add_widget(spy_image)
 
         # 버튼들
-        btn1 = Button(text='암호문', font_name='Font', font_size=sp(28),
+        btn1 = Button(text='암호화 도구', font_name='Font', font_size=sp(28),
                       size_hint_y=None, height=dp(80))
-        btn2 = Button(text='메모장', font_name='Font', font_size=sp(28),
+        btn2 = Button(text='보안 메모장', font_name='Font', font_size=sp(28),
                       size_hint_y=None, height=dp(80))
 
 
@@ -715,13 +725,29 @@ class MemoScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        Window.softinput_mode = 'resize'
+
+        # 저장 경로 설정
+        try:
+            from android.storage import app_storage_path
+            memo_base_path = app_storage_path()
+        except ImportError:
+            memo_base_path = os.path.join(os.path.expanduser("~"), 'AppData', 'Roaming', 'lotto')
+
+        self.memo_dir = os.path.join(memo_base_path, 'memos')
+        os.makedirs(self.memo_dir, exist_ok=True)
+
+        # 🔑 키 로딩 또는 생성
+        self.key_path = os.path.join(self.memo_dir, 'secret.key')
+        self.cipher = self.load_or_create_key()
+
         layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
 
         # 제목 입력창 + 새 메모 버튼 수평 배치
         title_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
 
         self.title_input = TextInput(
-            hint_text='메모 제목 입력...없으면 날짜 저장',
+            hint_text='제목 (생략 시 날짜)',
             multiline=False,
             font_name='Font',
             size_hint_x=0.7,
@@ -747,21 +773,130 @@ class MemoScreen(Screen):
         self.memo_spinner.bind(text=self.select_memo)
         layout.add_widget(self.memo_spinner)
 
-        # 메모 입력창
-        self.memo_input = TextInput(
-            hint_text='메모를 입력하세요...',
-            multiline=True,
+        # 메모 입력창을 ScrollView로 감싸기
+        # ✅ ScrollView 설정
+        self.memo_scroll = ScrollView(
             size_hint_y=0.7,
-            font_size=sp(22),
-            font_name='Font'
+            do_scroll_x=False,
+            do_scroll_y=True
         )
-        layout.add_widget(self.memo_input)
+
+
+        # ScrollView 안에 감쌀 BoxLayout 생성
+        self.memo_container = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=(dp(10), dp(10)),
+            spacing=dp(10)
+        )
+        self.memo_container.bind(minimum_height=self.memo_container.setter('height'))
+            
+        # ✅ TextInput 설정
+        self.memo_input = TextInput(
+            hint_text='내용을 입력해 주세요',
+            multiline=True,
+            font_size=sp(22),
+            font_name='Font',
+            size_hint_y=None,
+            height=dp(400),  # ← 메모장처럼 넉넉한 높이
+            padding =  [dp(10), dp(10), dp(10), dp(10)],
+            background_normal='',
+            background_active=''
+        )
+        
+        # ✅ 스크롤 공간 확보용 더미 Label
+        self.bottom_spacer = Label(size_hint_y=None, height=dp(50))  # ← 여백을 넉넉하게
+
+        # 초기 상태 고정
+        self.memo_input.fixed_height = dp(400)
+        self.memo_input.size_hint_y = None
+        self.memo_input.height = self.memo_input.fixed_height
+        
+
+        self.memo_container.add_widget(self.memo_input)
+        self.memo_container.add_widget(self.bottom_spacer)
+
+        self.memo_scroll.add_widget(self.memo_container)
+        
+        layout.add_widget(self.memo_scroll)
+
+        def scroll_if_cursor_hidden(*args):
+            Clock.schedule_once(check_cursor_position, 0.1)
+
+        self.just_focused = True
+
+        def check_cursor_position(dt):
+            if self.just_focused:
+                self.just_focused = False
+                return
+
+            try:
+                sv = self.memo_scroll
+                ti = self.memo_input
+
+                # 커서 윈도우 좌표
+                _, cursor_y = ti.to_window(*ti.cursor_pos)
+
+                # ScrollView 위치 계산
+                sv_y = sv.to_window(sv.x, sv.y)[1]
+                sv_top = sv_y + sv.height
+                sv_bottom = sv_y
+
+                # 커서가 너무 위나 아래에 있으면 스크롤
+                margin = dp(50)
+                if cursor_y < sv_bottom + margin or cursor_y > sv_top - margin:
+                    # 커서 기준으로 직접 스크롤 위치 조정
+                    sv.scroll_to(ti, padding=dp(200))  # 이건 TextInput 전체 기준이므로 필요 시 보정 가능
+
+            except Exception as e:
+                print("스크롤 체크 실패:", e)
+
+        # 바인딩 함수: 줄어드는 건 무시하고, 늘어나는 경우만 반영
+        def lock_maximum_height(instance, value):
+            current = instance.minimum_height
+            fixed = getattr(instance, 'fixed_height', 0)
+            if current > fixed + 1:  # 1px 이상 커졌을 때만 변경
+                instance.fixed_height = current
+                instance.height = current
+            else:
+                instance.height = fixed
+
+        # 바인딩 설정
+        self.memo_input.bind(text=lock_maximum_height)
+
+        
+        # ✅ 유지: 포커스될 때만 스크롤 확인
+        self.memo_input.bind(
+            focus=lambda instance, value: scroll_if_cursor_hidden() if value else None
+        )
+        
+        def on_enter_scroll(instance, value):
+            if value and value[-1:] == '\n':  # 마지막 문자가 엔터일 때
+
+                # 높이 자동 확장 처리
+                current = instance.minimum_height
+                if current > getattr(instance, 'fixed_height', 0):
+                    instance.fixed_height = current
+                    instance.height = current
+                else:
+                    instance.height = instance.fixed_height
+
+                # 스크롤 커서 위치 보정
+                Clock.schedule_once(lambda dt: scroll_if_cursor_hidden(), 0.05)
+
+                # 첫 줄 잘림 방지용 scroll_y 조정
+                Clock.schedule_once(lambda dt: setattr(self.memo_input, 'scroll_y', 1.05), 0.1)
+
+        self.memo_input.bind(text=on_enter_scroll)
+
 
         # 버튼들
         btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
 
         save_btn = Button(text='저장', font_name='Font')
-        load_btn = Button(text='다시 불러오기', font_name='Font')
+        plain_load_btn = Button(text='원문보기', font_name='Font')
+        load_btn = Button(text='불러오기', font_name='Font')
+        plain_load_btn.bind(on_press=self.load_plain_memo)
         delete_btn = Button(text='삭제', font_name='Font')
 
         save_btn.bind(on_press=self.save_memo)
@@ -769,7 +904,9 @@ class MemoScreen(Screen):
         delete_btn.bind(on_press=self.delete_memo)
 
         btn_layout.add_widget(save_btn)
+        btn_layout.add_widget(plain_load_btn)
         btn_layout.add_widget(load_btn)
+        
         btn_layout.add_widget(delete_btn)
 
         layout.add_widget(btn_layout)
@@ -805,34 +942,53 @@ class MemoScreen(Screen):
         self.current_filename = None
         self.memo_spinner.values = self.get_memo_list()
 
+
         
 
-
-
+        
+        
     def get_memo_list(self):
-        return [f for f in os.listdir(self.memo_dir) if f.endswith('.txt')]
+        return sorted([f for f in os.listdir(self.memo_dir) if f.endswith('.txt')])
 
     def save_memo(self, instance):
         if not self.current_filename:
             self.status_label.text = '저장 실패: 메모 파일이 선택되지 않았습니다.'
             return
         filepath = os.path.join(self.memo_dir, self.current_filename)
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(self.memo_input.text)
-        self.status_label.text = f'저장됨: {self.current_filename}'
+
+        encrypted = self.cipher.encrypt(self.memo_input.text.encode('utf-8'))
+        with open(filepath, 'wb') as f:
+            f.write(encrypted)
+
+        self.status_label.text = f'암호화 저장됨: {self.current_filename}'
 
     def load_memo(self, instance):
         if not self.current_filename:
             self.status_label.text = '불러오기 실패: 메모를 선택해주세요.'
             return
         filepath = os.path.join(self.memo_dir, self.current_filename)
-        if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
-                self.memo_input.text = f.read()
-            self.status_label.text = f'불러옴: {self.current_filename}'
-        else:
-            self.status_label.text = '파일이 존재하지 않습니다.'
-
+        try:
+            with open(filepath, 'rb') as f:
+                encrypted = f.read()
+                decrypted = self.cipher.decrypt(encrypted).decode('utf-8')  # ← 수정됨
+                self.memo_input.text = decrypted
+                self.status_label.text = f'불러오기 (복호화 완료): {self.current_filename}'
+        except Exception as e:
+            self.status_label.text = f'불러오기 실패: {str(e)}'
+            
+    def load_plain_memo(self, instance):
+        if not self.current_filename:
+            self.status_label.text = '불러오기 실패: 메모를 선택해주세요.'
+            return
+        filepath = os.path.join(self.memo_dir, self.current_filename)
+        try:
+            with open(filepath, 'rb') as f:
+                raw_data = f.read()
+                self.memo_input.text = raw_data.decode('utf-8', errors='replace')  # 복호화 없이 표시
+                self.status_label.text = f'불러오기 (암호화된 원본): {self.current_filename}'
+        except Exception as e:
+            self.status_label.text = f'불러오기 실패: {str(e)}'
+        
     def delete_memo(self, instance):
         if not self.current_filename:
             self.status_label.text = '삭제 실패: 메모를 선택해주세요.'
@@ -885,25 +1041,40 @@ class MemoScreen(Screen):
         if not title:
             title = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f'{title}.txt'
-        self.current_filename = filename
-
-        # 빈 텍스트로 시작
-        self.memo_input.text = ''
+        filepath = os.path.join(self.memo_dir, filename)
         
-        # 파일 새로 만들기 (빈 상태로)
-        filepath = os.path.join(self.memo_dir, self.current_filename)
+        # 중복 파일명 방지
+        counter = 1
+        while os.path.exists(filepath):
+            filename = f'{title}_{counter}.txt'
+            filepath = os.path.join(self.memo_dir, filename)
+            counter += 1
+
+        self.current_filename = filename
+        self.memo_input.text = ''
         with open(filepath, 'w', encoding='utf-8') as f:
             f.write('')
 
-        # 스피너에 값 추가하고 선택 상태로 만들기
         self.memo_spinner.values = self.get_memo_list()
         self.memo_spinner.text = filename
-
         self.status_label.text = f'새 메모 생성: {filename}'
 
     def select_memo(self, spinner, text):
         self.current_filename = text
         self.load_memo(None)
+
+    def load_or_create_key(self):
+        if os.path.exists(self.key_path):
+            with open(self.key_path, 'rb') as f:
+                key = f.read()
+        else:
+            key = Fernet.generate_key()
+            with open(self.key_path, 'wb') as f:
+                f.write(key)
+        return Fernet(key)
+
+
+
 
 
 class LottoApp(App):

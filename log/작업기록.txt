@@ -173,3 +173,195 @@ build.gradle에
 2. 메모장 암호화해서 보안 메모장으로 만들기.
 
 
+2025-05-17(토)
+메모장 내용이 길어지면 (TextInput)메모장이 키보드에 가려지는 문제
+ScrollView로 감싸기
+self.memo_input을 ScrollView 안에 넣으면, 텍스트가 길어지거나 키보드가 올라올 때 자동으로 스크롤되어 사용자 입력이 가려지지 않게 됩니다.
+
+메모정렬기능, 새 메모 생성 시 중복 방지
+
+메모장 저장할때 암호화하기.
+Fernet 암호화로 암복호화 수행. 
+
+Fernet은 Python에서 가장 간단하면서도 안전하게 쓸 수 있는 암호화 방식 중 하나입니다. cryptography 라이브러리에 포함되어 있으며, AES 128 암호화 + HMAC 서명을 자동으로 처리해주는 도구예요.
+
+여기까지 빌드해서 테스트 해보고 암호화 알고리즘들을 설명하는 화면을 하나 만들어보자. 
+테스트 완료. 
+오류없이 잘되긴 하는데 3번째 버튼 암호데이터보기 글자가 버튼밖으로 나감. 4글자까지만 안나가고 들어갈듯함. 
+그리고 메모 칠때 엔터누르면 키보드 아래로 내려가서 못보는 현상도 마찬가지고 
+
+10줄이상 메모장 입력시 
+커서가 키보드 아래로 내려가는 문제
+
+거의 다 됬다. 
+커서가 키보드 위쪽으로 잘 따라오는데. 
+메모장 마지막 줄일 경우엔 스크롤 공간이 없어서 스크롤을 땡겨도 키보드 아래에 가려진다. 
+
+가짜 여백 만들기?
+TextInput의 아래에 "가짜 여백"을 만들어서,
+스크롤이 더 가능하도록 공간을 확보해줍니다.
+
+2025-05-20(화)
+생각처럼 되지가 않네
+
+비공개테스트는 통과했고 
+
+1. 메모장 오류 등 코드 고치고
+2. 소개 페이지같은거 제대로 꾸미고 
+3. 외국 다운로드 용으로 언어 영어도 추가해서 넣고 빌드한다음 
+4. 프로모션 등록. ㄱㄱ
+
+2025-05-20(화)
+
+메모장 아래까지 메모하다가 위로 올리면 맨 윗줄이 잘려서 안보이는 문제
+
+문제 재정의
+✅ 메모장 내부에 글이 많을 때
+✅ 사용자가 위로 스크롤을 하면
+❌ 맨 윗줄(첫 줄)이 잘려서 반쯤만 보이거나, 아예 안 보임
+
+이건 ScrollView + TextInput 조합의 시각적 렌더링 문제이며,
+TextInput의 padding_y가 정상 작동하지 않거나,
+Kivy 내부적으로 첫 줄 높이를 정확히 반영하지 못하기 때문에 생깁니다.
+
+textinput에 상단 패딩을 강제로 추가.
+padding_y=[dp(10), dp(10)],          # 상단/하단 padding 명시적으로 설정
+
+해결. 
+
+_, cursor_y = ti.cursor_pos는 파이썬의 튜플 언패킹(tuple unpacking) 문법입니다.
+
+ti.cursor_pos  # 예: (x, y)
+TextInput.cursor_pos는 커서의 x, y 좌표를 튜플로 반환합니다.
+예를 들면 (150, 480) 같은 값이죠.
+x, y = ti.cursor_pos
+이렇게 쓰면 x에 150, y에 480이 들어갑니다.
+_, cursor_y = ti.cursor_pos
+항목	의미
+_	x값은 무시하겠다는 뜻 (관례적 변수명)
+cursor_y	y값만 필요하니까 이 변수에만 담음
+파이썬에서는 필요 없는 값은 _로 받아서 버리는 관습이 있습니다.
+_(언더스코어,밑줄 변수)
+
+스크롤 맞추는 조건.
+터치해서 커서를 잡을때 스크롤 작동 
++ 엔터도 조건으로 추가하자. 
+
+if cursor_y < 키보드 위 경계선:
+    # 커서가 아래에 있으므로 → 아래로 스크롤
+else:
+    # 커서는 충분히 위에 있으므로 → 스크롤 안 함
+
+엔터를 치고 위로 올려보면 첫줄이 안보이고 
+글자를 치고 위로 올려보면 첫줄이 보인다. 
+
+해결!
+높이확장 + 스크롤 보정으로 나름 만족스러운 메모장이 완성됬다. 
+
+해외에서도 설치하고 이용할수 있게 언어도 설정하자. 
+
+운영체제(OS) 언어 설정 읽기
+import locale
+
+lang, encoding = locale.getdefaultlocale()
+print(lang)  # 예: 'ko_KR', 'en_US', 'ja_JP' 등
+
+# 언어코드만 떼기
+lang_code = lang.split('_')[0] if lang else 'en'  # 기본은 영어
+
+
+언어설정 완료. 
+휴대폰 언어에 따라 한글과 영어로 자동 변환됨.
+ko는 한글 나머지는 영어.  
+
+테스트 완료.
+다른 화면도 추가하고 빌드해서 프로모션으로 올려보자. 
+
+하드코딩으로 싹 넣었다. 
+
+문제1 : 복사할때 '암호문 : ' 이거까지 복사됨,
+f"{...}"를 써야만 self.translations[...] 값을 실제 문자열로 평가해서 얻을 수 있어요.
+
+.replace(prefix, "")는 그 접두어가 있는 경우에만 제거해줍니다.
+
+def copy_to_clipboard(self, instance):
+        text = self.encrypted_output.text.replace("{self.translations[self.lang]['text21']}: ", "")
+        Clipboard.copy(text)
+
+이걸
+def copy_to_clipboard(self, instance):
+    prefix = f"{self.translations[self.lang]['text21']}: "
+    text = self.encrypted_output.text.replace(prefix, "")
+    Clipboard.copy(text)
+이렇게 했다. 이래야 replace가 암호문만 복사해준다. 
+
+문제2 : 영어로 언어바꾸고 들어가봤는데 영어로 암호화 화면 들어가면 꺼짐. 한글일땐 멀쩡
+
+메모장도 문제 없다.  한영 모두 잘됨
+한글 암호화도 문제 없는데
+영어 언어에서 암호화 들어가면 갑자기 꺼짐. 
+
+
+adb logcat으로 로그 따봄. 
+
+meabi-v7a/build/python-installs/encrycode12/arm64-v8a/kivy/uix/widget.py", line 589, in on_touch_down
+05-20 22:27:59.891 11824 11949 I python  :    File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+05-20 22:27:59.891 11824 11949 I python  :    File "/home/yuuki/lotto_app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/encrycode12/arm64-v8a/kivy/uix/widget.py", line 589, in on_touch_down
+05-20 22:27:59.891 11824 11949 I python  :    File "kivy/_event.pyx", line 731, in kivy._event.EventDispatcher.dispatch
+05-20 22:27:59.891 11824 11949 I python  :    File "/home/yuuki/lotto_app/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build/python-installs/encrycode12/arm64-v8a/kivy/uix/behaviors/button.py", line 151, in on_touch_down
+05-20 22:27:59.891 11824 11949 I python  :    File "kivy/_event.pyx", line 727, in kivy._event.EventDispatcher.dispatch
+05-20 22:27:59.891 11824 11949 I python  :    File "kivy/_event.pyx", line 1307, in kivy._event.EventObservers.dispatch
+05-20 22:27:59.891 11824 11949 I python  :    File "kivy/_event.pyx", line 1231, in kivy._event.EventObservers._dispatch
+05-20 22:27:59.892 11824 11949 I python  :    File "/home/yuuki/lotto_app/.buildozer/android/app/main.py", line 143, in show_ad_and_switch1
+05-20 22:27:59.892 11824 11949 I python  :    File "/home/yuuki/lotto_app/.buildozer/android/app/main.py", line 1288, in switch_to_screen
+05-20 22:27:59.892 11824 11949 I python  :    File "/home/yuuki/lotto_app/.buildozer/android/app/main.py", line 274, in __init__
+05-20 22:27:59.892 11824 11949 I python  :  KeyError: '?移?궎 ?뷀샇??
+FINDSTR: 쓰기 오류입니다.
+
+algorithm_groups 키가 언어마다 다르게 정의된 경우
+앞서 처리한 부분이지만, 예를 들어 다음처럼 고정된 한글 키로 접근하면 영어에서 KeyError 납니다:
+
+짐작가는 부분이 있다. 
+self.algo_spinner = Spinner(
+            text=self.translations[self.lang]['text2'],
+            values=self.algorithm_groups[self.translations['ko']['text30']],
+            font_name='Font',
+            font_size=sp(20),
+            size_hint=(0.5, 1),
+            height=dp(50)
+        ) 
+
+스피너 언어 바꿀때 키는 달라도 값은 같아서 그냥 한글키 강제로 넣었는데 이것때문인가보다. 
+group_key = self.translations[self.lang]['text30']
+values=self.algorithm_groups[group_key]
+
+언어대로 바꿨다. 안됨.
+
+아 괄호가 지워졌었네
+
+오전 12:33 2025-05-21(수)
+
+빌드가 또 머리아프게 한다. 
+
+./gradlew bundleRelease 로 빌드했다. 
+서명은 따로 했고 
+빌드 그래들에서 
+    buildTypes {
+        debug {
+        }
+        release {
+            debuggable false
+        }
+    }
+
+디버그 false 한줄 추가. 
+전에 며칠동안 빌드해봤는데 난독화나 그런것들 넣으면 바로 앱이 꺼져버려서 다 빼고 저것만 넣는다. 
+
+오류
+현재 앱이 31의 API 수준을 타겟팅하고 있지만, 보안 및 성능에 최적화된 최신 API를 기반으로 앱을 빌드하려면 API 수준 34 이상을 타겟팅해야 합니다. 자세히 알아보기
+
+아까 클린써서 그래들 초기화된거같다. 
+다시 34로 올리고 클린 후 빌드
+
+성공. 이제 검토만 기다리면 앱이 스토어에 올라가게 된다. 
+스토어 올라가면 품앗이한 카페 가서 이제 비공개 통과했으니 삭제해도 된다고 게시글 올리고 

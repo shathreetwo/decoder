@@ -44,6 +44,11 @@ from Crypto.Cipher import DES3
 from kivy.uix.scrollview import ScrollView
 from cryptography.fernet import Fernet
 
+from kivy.core.window import Window
+import locale
+from jnius import autoclass
+
+
 
 
 LabelBase.register(name='Font', fn_regular='NotoSansKR.ttf')
@@ -61,6 +66,8 @@ DES_DEFAULT_KEY = b'deskey88'
 AdMobModule = autoclass("org.kivy.admob.AdMobModule")
 PythonActivity = autoclass("org.kivy.android.PythonActivity")
 
+
+
 @run_on_ui_thread
 def load_admob(activity):
     AdMobModule.loadInterstitial(activity)
@@ -70,8 +77,20 @@ def show_admob(activity):
     AdMobModule.showInterstitial(activity)
 
 class MainScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, lang='ko', **kwargs):
         super().__init__(**kwargs)
+
+        self.lang = lang
+        self.translations = {
+            'en': {
+                'btn1': 'Encryption Tool',
+                'btn2': 'Secure Notepad',
+            },
+            'ko': {
+                'btn1': '암호화 도구',
+                'btn2': '보안 메모장',
+            }
+        }
 
         self.current_activity = cast('android.app.Activity', PythonActivity.mActivity)
         load_admob(self.current_activity)
@@ -97,14 +116,16 @@ class MainScreen(Screen):
 
 
 
-
-
-        
-
-        btn1 = Button(text='암호 도구', font_name='Font', font_size=sp(28),
-                      size_hint_y=None, height=dp(80))
-        btn2 = Button(text='보안 메모', font_name='Font', font_size=sp(28),
-                      size_hint_y=None, height=dp(80))
+        btn1 = Button(
+            text=self.translations[self.lang]['btn1'], 
+            font_name='Font', font_size=sp(28),
+            size_hint_y=None, height=dp(80)
+        )
+        btn2 = Button(
+            text=self.translations[self.lang]['btn2'], 
+            font_name='Font', font_size=sp(28),
+            size_hint_y=None, height=dp(80)
+        )
 
 
         
@@ -135,16 +156,103 @@ class KoreanSpinnerOption(SpinnerOption):
 
 
 class CipherApp(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, lang='ko', **kwargs):
         super().__init__(**kwargs)
 
-        self.algorithm_groups = {
-            '대칭키 암호화': ['ChaCha20', 'AES', 'Blowfish', '3DES', 'DES' ],
-            '비대칭키 암호화': ['RSA'],
-            '해시': ['BLAKE2', 'SHA-512', 'SHA-256', 'SHA-1', 'MD5'],
-            '고전 암호': ['Caesar', 'Reverse','Vigenere'],
-            '인코딩': ['ASCII', 'Hex', 'Unicode', 'Base64', 'URL']
+        self.lang = lang
+        translations = {
+            'en': {
+                'text1': 'Select Encryption Type',
+                'text2': 'Select Algorithm',
+                'text3': 'Enter encryption key (default key if empty)',
+                'text4': 'Public Key :',
+                'text5': 'Private Key :',
+                'text6': 'Enter plaintext here',
+                'text7': 'Encrypt',
+                'text8': 'Encrypted text will appear here',
+                'text9': 'Copy',
+                'text10': 'Enter ciphertext here',
+                'text11': 'Decrypt',
+                'text12': 'Decrypted plaintext will appear here',
+                'text13': 'Copy',
+                'text14': '← Back',
+                'text15': 'Unsupported algorithm.',
+                'text16': 'Hashes cannot be decrypted.',
+                'text17': 'Plaintext',
+                'text18': 'Decryption error: please check the format.',
+                'text19': 'Decryption Failed',
+                'text20': 'Encryption Failed',
+                'text21': 'Ciphertext',
+                'text22': 'Number format error: Must be numbers separated by spaces.',
+                'text23': 'Format error: Must start with U+ followed by a Unicode value.',
+                'text24': 'AES key must be 16, 24, or 32 bytes long.',
+                'text25': 'DES key must be exactly 8 bytes long.',
+                'text26': 'Invalid key format. Please enter a Base64-encoded string.',
+                'text27': 'ChaCha20 key must be exactly 32 bytes long.',
+                'text28': 'Blowfish key must be between 4 and 56 bytes.',
+                'text29': '3DES key must be either 16 or 24 bytes long.',
+                'text30': 'Symmetric Encryption',
+            },
+            'ko': {
+                'text1': '암호화 종류 선택',
+                'text2': '알고리즘 선택',
+                'text3': '암호 키 입력 (키 없으면 자동 기본키)',
+                'text4': '공개키 :',
+                'text5': '개인키 :',
+                'text6': '여기에 평문 입력',
+                'text7': '암호화',
+                'text8': '암호문이 여기에 표시됩니다',
+                'text9': '복사',
+                'text10': '여기에 암호문 입력',
+                'text11': '복호화',
+                'text12': '복호화된 평문이 여기에 표시됩니다',
+                'text13': '복사',
+                'text14': '← 뒤로가기',
+                'text15': '지원되지 않는 알고리즘입니다.',
+                'text16': '해시는 복호화가 불가능합니다.',
+                'text17': '평문',
+                'text18': '복호화 오류: 형식을 확인하세요.',
+                'text19': '복호화 실패',
+                'text20': '암호화 실패',
+                'text21': '암호문',
+                'text22': '숫자 형식 오류: 공백으로 구분된 숫자여야 합니다.',
+                'text23': '형식 오류: U+로 시작하는 유니코드 값이어야 합니다.',
+                'text24': 'AES 키는 16, 24 또는 32바이트여야 합니다.',
+                'text25': 'DES 키는 정확히 8바이트여야 합니다.',
+                'text26': '키 형식이 잘못되었습니다. Base64로 인코딩된 문자열을 입력하세요.',
+                'text27': 'ChaCha20 키는 정확히 32바이트여야 합니다.',
+                'text28': 'Blowfish 키는 4~56바이트여야 합니다.',
+                'text29': '3DES 키는 16 또는 24바이트여야 합니다.',
+                'text30': '대칭키 암호화',
+                
+            }
         }
+
+
+
+
+
+        
+
+        if self.lang == 'en':
+            self.algorithm_groups = {
+                'Symmetric Encryption': ['ChaCha20', 'AES', 'Blowfish', '3DES', 'DES'],
+                'Asymmetric Encryption': ['RSA'],
+                'Hash': ['BLAKE2', 'SHA-512', 'SHA-256', 'SHA-1', 'MD5'],
+                'Classical Ciphers': ['Caesar', 'Reverse', 'Vigenere'],
+                'Encoding': ['ASCII', 'Hex', 'Unicode', 'Base64', 'URL']
+            }
+        else:
+            self.algorithm_groups = {
+                '대칭키 암호화': ['ChaCha20', 'AES', 'Blowfish', '3DES', 'DES'],
+                '비대칭키 암호화': ['RSA'],
+                '해시': ['BLAKE2', 'SHA-512', 'SHA-256', 'SHA-1', 'MD5'],
+                '고전 암호': ['Caesar', 'Reverse', 'Vigenere'],
+                '인코딩': ['ASCII', 'Hex', 'Unicode', 'Base64', 'URL']
+            }
+
+        group_key = self.translations[self.lang]['text30']
+            
         self.rsa_key = RSA.generate(2048)
 
         layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
@@ -153,7 +261,7 @@ class CipherApp(Screen):
         spinner_layout = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(50))
 
         self.group_spinner = Spinner(
-            text='암호화 종류 선택',
+            text=self.translations[self.lang]['text1'],
             values=tuple(self.algorithm_groups.keys()),
             font_name='Font',
             font_size=sp(20),
@@ -163,10 +271,11 @@ class CipherApp(Screen):
         )
         self.group_spinner.bind(text=self.on_group_select)
         spinner_layout.add_widget(self.group_spinner)
+        
 
         self.algo_spinner = Spinner(
-            text='알고리즘 선택',
-            values=self.algorithm_groups['대칭키 암호화'],
+            text=self.translations[self.lang]['text2'],
+            values=self.algorithm_groups[group_key],
             font_name='Font',
             font_size=sp(20),
             size_hint=(0.5, 1),
@@ -180,7 +289,7 @@ class CipherApp(Screen):
         
         self.key_input_layout = BoxLayout(orientation='vertical', size_hint_y=None, height=0)
         self.key_input = TextInput(
-            hint_text="암호 키 입력 (키 없으면 자동 기본키)",
+            hint_text=self.translations[self.lang]['text3'],
             font_name='Font',
             font_size=sp(20),
             multiline=False,
@@ -195,7 +304,7 @@ class CipherApp(Screen):
         
         self.rsa_key_line = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=0)
 
-        self.rsa_pubkey_label = Label(text="공개키:", font_name='Font', font_size=sp(18), size_hint=(0.15, 1))
+        self.rsa_pubkey_label = Label(text=self.translations[self.lang]['text4'], font_name='Font', font_size=sp(18), size_hint=(0.15, 1))
         self.rsa_pubkey_input = TextInput(
             hint_text="-----BEGIN PUBLIC KEY----- ...",
             font_name='Font',
@@ -203,7 +312,7 @@ class CipherApp(Screen):
             multiline=False,
             size_hint=(0.35, 1)
         )
-        self.rsa_privkey_label = Label(text="개인키:", font_name='Font', font_size=sp(18), size_hint=(0.15, 1))
+        self.rsa_privkey_label = Label(text=self.translations[self.lang]['text5'], font_name='Font', font_size=sp(18), size_hint=(0.15, 1))
         self.rsa_privkey_input = TextInput(
             hint_text="-----BEGIN PRIVATE KEY----- ...",
             font_name='Font',
@@ -223,7 +332,7 @@ class CipherApp(Screen):
 
         
         self.plain_input = TextInput(
-            hint_text="여기에 평문 입력",
+            hint_text=self.translations[self.lang]['text6'],
             font_name='Font',
             font_size=sp(20),
             multiline=True       
@@ -233,7 +342,7 @@ class CipherApp(Screen):
 
         
         self.encrypt_button = Button(
-            text="암호화",
+            text=self.translations[self.lang]['text7'],
             font_name='Font',
             font_size=sp(22),
             size_hint=(1, None),
@@ -246,14 +355,14 @@ class CipherApp(Screen):
         output_layout = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(50))
 
         self.encrypted_output = Label(
-            text="암호문이 여기에 표시됩니다",
+            text=self.translations[self.lang]['text8'],
             font_name='Font',
             font_size=sp(18)
         )
         output_layout.add_widget(self.encrypted_output)
 
         self.copy_button = Button(
-            text="복사",
+            text=self.translations[self.lang]['text9'],
             font_name='Font',
             font_size=sp(18),
             size_hint=(None, 1),
@@ -266,7 +375,7 @@ class CipherApp(Screen):
 
         
         self.cipher_input = TextInput(
-            hint_text="여기에 암호문 입력",
+            hint_text=self.translations[self.lang]['text10'],
             font_name='Font',
             font_size=sp(20),
             multiline=True        
@@ -275,7 +384,7 @@ class CipherApp(Screen):
 
         
         self.decrypt_button = Button(
-            text="복호화",
+            text=self.translations[self.lang]['text11'],
             font_name='Font',
             font_size=sp(22),
             size_hint=(1, None),
@@ -288,14 +397,14 @@ class CipherApp(Screen):
         decrypt_output_layout = BoxLayout(orientation='horizontal', spacing=dp(10), size_hint_y=None, height=dp(50))
 
         self.decrypted_output = Label(
-            text="복호화된 평문이 여기에 표시됩니다",
+            text=self.translations[self.lang]['text12'],
             font_name='Font',
             font_size=sp(18)
         )
         decrypt_output_layout.add_widget(self.decrypted_output)
 
         self.copy_decrypted_button = Button(
-            text="복사",
+            text=self.translations[self.lang]['text13'],
             font_name='Font',
             font_size=sp(18),
             size_hint=(None, 1),
@@ -307,7 +416,7 @@ class CipherApp(Screen):
         layout.add_widget(decrypt_output_layout)
 
         back_button = Button(
-            text='← 뒤로가기',
+            text=self.translations[self.lang]['text14'],
             font_name='Font',
             font_size=sp(20),
             size_hint=(1, None),
@@ -372,9 +481,9 @@ class CipherApp(Screen):
             result = self.vigenere_encrypt(plain, keyword)
             
         else:
-            result = "지원되지 않는 알고리즘입니다."
+            result = self.translations[self.lang]['text15']
             
-        self.encrypted_output.text = f"암호문: {result}"
+        self.encrypted_output.text = f"{self.translations[self.lang]['text21']}: {result}"
 
     def decrypt_text(self, instance):
         algo = self.algo_spinner.text
@@ -401,18 +510,18 @@ class CipherApp(Screen):
             elif algo == 'RSA':
                 result = self.rsa_decrypt(cipher)
             elif algo in ('SHA-1', 'SHA-256', 'SHA-512', 'BLAKE2', 'MD5'):
-                result = "해시는 복호화가 불가능합니다."        
+                result = self.translations[self.lang]['text16']        
             elif algo == 'ASCII':
                 try:
                     result = ''.join(chr(int(code)) for code in cipher.strip().split())
                 except:
-                    result = "숫자 형식 오류: 공백으로 구분된 숫자여야 합니다."
+                    result = self.translations[self.lang]['text22']
 
             elif algo == 'Unicode':
                 try:
                     result = ''.join(chr(int(code.replace("U+", ""), 16)) for code in cipher.strip().split())
                 except:
-                    result = "형식 오류: U+로 시작하는 유니코드 값이어야 합니다."
+                    result = self.translations[self.lang]['text23']
 
             elif algo == 'ChaCha20':
                 result = self.chacha20_decrypt(cipher)
@@ -421,19 +530,20 @@ class CipherApp(Screen):
                 result = self.vigenere_decrypt(cipher, keyword)
                             
             else:
-                result = "지원되지 않는 알고리즘입니다."
+                result = self.translations[self.lang]['text15']
             
-            self.decrypted_output.text = f"평문: {result}"
+            self.decrypted_output.text = f"{self.translations[self.lang]['text17']}: {result}"
         except Exception:
-            self.decrypted_output.text = "복호화 오류: 형식을 확인하세요."
+            self.decrypted_output.text = self.translations[self.lang]['text18']
 
     def copy_to_clipboard(self, instance):
-        text = self.encrypted_output.text.replace("암호문: ", "")
+        prefix = f"{self.translations[self.lang]['text21']}: "
+        text = self.encrypted_output.text.replace(prefix, "")
         Clipboard.copy(text)
-        
 
     def copy_decrypted_text(self, instance):
-        text = self.decrypted_output.text.replace("평문: ", "")
+        prefix = f"{self.translations[self.lang]['text17']}: "
+        text = self.decrypted_output.text.replace(prefix, "")
         Clipboard.copy(text)
         
 
@@ -442,7 +552,7 @@ class CipherApp(Screen):
         key = key_input_text.encode('utf-8') if key_input_text else AES_DEFAULT_KEY
 
         if len(key) not in [16, 24, 32]:
-            return "AES 키는 16, 24 또는 32바이트여야 합니다."
+            return self.translations[self.lang]['text24']
 
         cipher = AES.new(key, AES.MODE_CBC)
         ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), AES.block_size))
@@ -456,7 +566,7 @@ class CipherApp(Screen):
             key = key_input_text.encode('utf-8') if key_input_text else AES_DEFAULT_KEY
 
             if len(key) not in [16, 24, 32]:
-                return "AES 키는 16, 24 또는 32바이트여야 합니다."
+                return self.translations[self.lang]['text24']
 
             iv_b64, ct_b64 = ciphertext.split(":")
             iv = base64.b64decode(iv_b64)
@@ -465,14 +575,14 @@ class CipherApp(Screen):
             pt = unpad(cipher.decrypt(ct), AES.block_size).decode('utf-8')
             return pt
         except Exception:
-            return "복호화 실패"
+            return self.translations[self.lang]['text19']
             
     def des_encrypt(self, plaintext):
         key_input = self.key_input.text.encode('utf-8')
         key = key_input if key_input else DES_DEFAULT_KEY
         
         if len(key) != 8:
-            return "DES 키는 정확히 8바이트여야 합니다."
+            return self.translations[self.lang]['text25']
         cipher = DES.new(key, DES.MODE_CBC)
         ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), 8))
         iv = base64.b64encode(cipher.iv).decode('utf-8')
@@ -485,7 +595,7 @@ class CipherApp(Screen):
             key = key_input if key_input else DES_DEFAULT_KEY
             
             if len(key) != 8:
-                return "DES 키는 정확히 8바이트여야 합니다."
+                return self.translations[self.lang]['text25']
             iv_b64, ct_b64 = ciphertext.split(":")
             iv = base64.b64decode(iv_b64)
             ct = base64.b64decode(ct_b64)
@@ -493,7 +603,7 @@ class CipherApp(Screen):
             pt = unpad(cipher.decrypt(ct), 8).decode('utf-8')
             return pt
         except Exception:
-            return "복호화 실패"
+            return self.translations[self.lang]['text19']
         
     def rsa_encrypt(self, plaintext):
         try:
@@ -509,7 +619,7 @@ class CipherApp(Screen):
             encrypted = cipher.encrypt(plaintext.encode('utf-8'))
             return base64.b64encode(encrypted).decode('utf-8')
         except Exception as e:
-            return f"암호화 실패: {str(e)}"
+            return f"{self.translations[self.lang]['text20']}: {str(e)}"
 
     def rsa_decrypt(self, ciphertext):
         try:
@@ -525,7 +635,7 @@ class CipherApp(Screen):
             decrypted = cipher.decrypt(base64.b64decode(ciphertext))
             return decrypted.decode('utf-8')
         except Exception as e:
-            return f"복호화 실패: {str(e)}"
+            return f"{self.translations[self.lang]['text19']}: {str(e)}"
 
     def hash_text_sha256(self, text):
         return hashlib.sha256(text.encode('utf-8')).hexdigest()
@@ -568,10 +678,10 @@ class CipherApp(Screen):
                 key = get_random_bytes(32)
                 include_key = True  
         except Exception:
-            return "키 형식이 잘못되었습니다. Base64로 인코딩된 문자열을 입력하세요."
+            return self.translations[self.lang]['text26']
 
         if len(key) != 32:
-            return "ChaCha20 키는 정확히 32바이트여야 합니다."
+            return self.translations[self.lang]['text27']
 
         nonce = get_random_bytes(12)
         cipher = ChaCha20.new(key=key, nonce=nonce)
@@ -594,7 +704,7 @@ class CipherApp(Screen):
             if key_input_str:
                 key = base64.b64decode(key_input_str)
                 if len(key) != 32:
-                    return "ChaCha20 키는 정확히 32바이트여야 합니다."
+                    return self.translations[self.lang]['text27']
                 ciphertext = raw[12:]
             else:
                 key = raw[12:44]
@@ -604,14 +714,14 @@ class CipherApp(Screen):
             plaintext = cipher.decrypt(ciphertext).decode('utf-8')
             return plaintext
         except Exception:
-            return "복호화 실패"
+            return self.translations[self.lang]['text19']
         
     def blowfish_encrypt(self, plaintext):
         key_input_text = self.key_input.text.strip()
         key = key_input_text.encode('utf-8') if key_input_text else b'mydefaultkey123'  
 
         if not (4 <= len(key) <= 56):
-            return "Blowfish 키는 4~56바이트여야 합니다."
+            return self.translations[self.lang]['text28']
 
         cipher = Blowfish.new(key, Blowfish.MODE_CBC)
         ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), BLOWFISH_BLOCK_SIZE))
@@ -625,7 +735,7 @@ class CipherApp(Screen):
             key = key_input_text.encode('utf-8') if key_input_text else b'mydefaultkey123'
 
             if not (4 <= len(key) <= 56):
-                return "Blowfish 키는 4~56바이트여야 합니다."
+                return self.translations[self.lang]['text28']
 
             iv_b64, ct_b64 = ciphertext.split(":")
             iv = base64.b64decode(iv_b64)
@@ -634,7 +744,7 @@ class CipherApp(Screen):
             pt = unpad(cipher.decrypt(ct), BLOWFISH_BLOCK_SIZE).decode('utf-8')
             return pt
         except Exception:
-            return "복호화 실패"
+            return self.translations[self.lang]['text19']
 
     def triple_des_encrypt(self, plaintext):
         key_input_text = self.key_input.text.strip()
@@ -642,7 +752,7 @@ class CipherApp(Screen):
 
         
         if len(key) not in [16, 24]:
-            return "3DES 키는 16 또는 24바이트여야 합니다."
+            return self.translations[self.lang]['text29']
 
         cipher = DES3.new(key, DES3.MODE_CBC)
         ct_bytes = cipher.encrypt(pad(plaintext.encode('utf-8'), TDES_BLOCK_SIZE))
@@ -656,7 +766,7 @@ class CipherApp(Screen):
             key = key_input_text.encode('utf-8') if key_input_text else b'default3deskey1234567890'
 
             if len(key) not in [16, 24]:
-                return "3DES 키는 16 또는 24바이트여야 합니다."
+                return self.translations[self.lang]['text29']
 
             iv_b64, ct_b64 = ciphertext.split(":")
             iv = base64.b64decode(iv_b64)
@@ -665,7 +775,7 @@ class CipherApp(Screen):
             pt = unpad(cipher.decrypt(ct), TDES_BLOCK_SIZE).decode('utf-8')
             return pt
         except Exception:
-            return "복호화 실패"
+            return self.translations[self.lang]['text19']
 
     def vigenere_encrypt(self, plaintext, keyword):
         result = ''
@@ -725,7 +835,6 @@ class CipherApp(Screen):
             self.rsa_key_line.height = dp(50)
 
         else:
-            # 둘 다 숨기기
             self.key_input_layout.opacity = 0
             self.key_input_layout.disabled = True
             self.key_input_layout.height = 0
@@ -737,8 +846,70 @@ class CipherApp(Screen):
 
 
 class MemoScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, lang='ko', **kwargs):
         super().__init__(**kwargs)
+        
+        self.lang = lang
+        self.translations = {
+            'en': {
+                'txt1': 'Title (if empty, current date will be used)',
+                'txt2': 'New Memo',
+                'txt3': 'Select Memo',
+                'txt4': 'Please enter content',
+                'txt5': 'Save',
+                'txt6': 'View Original',
+                'txt7': 'Load',
+                'txt8': 'Delete',
+                'txt9': '← Back',
+                'txt10': 'Save failed: No memo file selected.',
+                'txt11': 'Encrypted and saved:',
+                'txt12': 'Load failed: Please select a memo.',
+                'txt13': 'Loaded (Decryption successful):',
+                'txt14': 'Load failed:',
+                'txt15': 'Load failed: Please select a memo.',
+                'txt16': 'Loaded (Encrypted original):',
+                'txt17': 'Load failed:',
+                'txt18': 'Delete failed: Please select a memo.',
+                'txt19': 'Do you want to delete this memo?',
+                'txt20': 'Cancel',
+                'txt21': 'Deleted:',
+                'txt22': 'Memo selected',
+                'txt23': 'Delete complete.',
+                'txt24': 'Delete cancelled',
+                'txt25': 'New memo created:',
+                'txt26': 'New Memo',
+            },
+            'ko': {
+                'txt1': '제목 (생략 시 날짜)',
+                'txt2': '새 메모',
+                'txt3': '메모 선택',
+                'txt4': '내용을 입력해 주세요',
+                'txt5': '저장',
+                'txt6': '원문보기',
+                'txt7': '불러오기',
+                'txt8': '삭제',
+                'txt9': '← 뒤로가기',
+                'txt10': '저장 실패: 메모 파일이 선택되지 않았습니다.',
+                'txt11': '암호화 저장됨:',
+                'txt12': '불러오기 실패: 메모를 선택해주세요.',
+                'txt13': '불러오기 (복호화 완료):',
+                'txt14': '불러오기 실패:',
+                'txt15': '불러오기 실패: 메모를 선택해주세요.',
+                'txt16': '불러오기 (암호화된 원본):',
+                'txt17': '불러오기 실패:',
+                'txt18': '삭제 실패: 메모를 선택해주세요.',
+                'txt19': '메모를 삭제하시겠습니까?',
+                'txt20': '취소',
+                'txt21': '삭제됨:',
+                'txt22': '메모 선택',
+                'txt23': '삭제 완료.',
+                'txt24': '삭제 취소됨',
+                'txt25': '새 메모 생성:',
+                'txt26': '새 메모',
+            }
+        }
+
+        Window.softinput_mode = 'resize'
 
         try:
             from android.storage import app_storage_path
@@ -749,23 +920,21 @@ class MemoScreen(Screen):
         self.memo_dir = os.path.join(memo_base_path, 'memos')
         os.makedirs(self.memo_dir, exist_ok=True)
 
-
         self.key_path = os.path.join(self.memo_dir, 'secret.key')
         self.cipher = self.load_or_create_key()
 
         layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
 
-
         title_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
 
         self.title_input = TextInput(
-            hint_text='메모 제목 입력...없으면 날짜 저장',
+            hint_text=self.translations[self.lang]['txt1'],
             multiline=False,
             font_name='Font',
             size_hint_x=0.7,
             font_size=sp(20)
         )
-        new_btn = Button(text='새 메모', size_hint_x=0.3,  font_name='Font')
+        new_btn = Button(text=self.translations[self.lang]['txt2'], size_hint_x=0.3,  font_name='Font')
         new_btn.bind(on_press=self.new_memo)
 
         title_layout.add_widget(self.title_input)
@@ -773,9 +942,8 @@ class MemoScreen(Screen):
 
         layout.add_widget(title_layout)
 
-
         self.memo_spinner = Spinner(
-            text='메모 선택',
+            text=self.translations[self.lang]['txt3'],
             values=[],
             size_hint_y=None,
             height=dp(40),
@@ -786,56 +954,146 @@ class MemoScreen(Screen):
         layout.add_widget(self.memo_spinner)
 
 
-        memo_scroll = ScrollView(
+        self.memo_scroll = ScrollView(
             size_hint_y=0.7,
             do_scroll_x=False,
             do_scroll_y=True
         )
+
+
+        self.memo_container = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            padding=(dp(10), dp(10)),
+            spacing=dp(10)
+        )
+        self.memo_container.bind(minimum_height=self.memo_container.setter('height'))
             
 
         self.memo_input = TextInput(
-            hint_text='메모를 입력하세요...',
+            hint_text=self.translations[self.lang]['txt4'],
             multiline=True,
             font_size=sp(22),
             font_name='Font',
             size_hint_y=None,
             height=dp(400),  
-            padding=(dp(10), dp(10)),
+            padding =  [dp(10), dp(10), dp(10), dp(10)],
             background_normal='',
             background_active=''
         )
-        self.memo_input.bind(minimum_height=self.memo_input.setter('height'))  
+        
 
-        memo_scroll.add_widget(self.memo_input)
-        layout.add_widget(memo_scroll)
+        self.bottom_spacer = Label(size_hint_y=None, height=dp(50))
+
+        self.memo_input.fixed_height = dp(400)
+        self.memo_input.size_hint_y = None
+        self.memo_input.height = self.memo_input.fixed_height
+        
+
+        self.memo_container.add_widget(self.memo_input)
+        self.memo_container.add_widget(self.bottom_spacer)
+
+        self.memo_scroll.add_widget(self.memo_container)
+        
+        layout.add_widget(self.memo_scroll)
+
+        def scroll_if_cursor_hidden(*args):
+            Clock.schedule_once(check_cursor_position, 0.1)
+
+        self.just_focused = True
+
+        def check_cursor_position(dt):
+            if self.just_focused:
+                self.just_focused = False
+                return
+
+            try:
+                sv = self.memo_scroll
+                ti = self.memo_input
 
 
+                _, cursor_y = ti.to_window(*ti.cursor_pos)
+
+
+                sv_y = sv.to_window(sv.x, sv.y)[1]
+                sv_top = sv_y + sv.height
+                sv_bottom = sv_y
+
+
+                margin = dp(50)
+                if cursor_y < sv_bottom + margin or cursor_y > sv_top - margin:
+                    sv.scroll_to(ti, padding=dp(200))  
+
+            except Exception as e:
+                print("스크롤 체크 실패:", e)
+
+
+        def lock_maximum_height(instance, value):
+            current = instance.minimum_height
+            fixed = getattr(instance, 'fixed_height', 0)
+            if current > fixed + 1:  
+                instance.fixed_height = current
+                instance.height = current
+            else:
+                instance.height = fixed
+
+
+        self.memo_input.bind(text=lock_maximum_height)
+
+
+        self.memo_input.bind(
+            focus=lambda instance, value: scroll_if_cursor_hidden() if value else None
+        )
+        
+        def on_enter_scroll(instance, value):
+            if value and value[-1:] == '\n':  
+
+                
+                current = instance.minimum_height
+                if current > getattr(instance, 'fixed_height', 0):
+                    instance.fixed_height = current
+                    instance.height = current
+                else:
+                    instance.height = instance.fixed_height
+
+                
+                Clock.schedule_once(lambda dt: scroll_if_cursor_hidden(), 0.05)
+
+                
+                Clock.schedule_once(lambda dt: setattr(self.memo_input, 'scroll_y', 1.05), 0.1)
+
+        self.memo_input.bind(text=on_enter_scroll)
+
+
+        
         btn_layout = BoxLayout(size_hint_y=None, height=dp(50), spacing=dp(10))
 
-        save_btn = Button(text='저장', font_name='Font')
-        load_btn = Button(text='불러오기', font_name='Font')
-        plain_load_btn = Button(text='암호 데이터 보기', font_name='Font')
+        save_btn = Button(text=self.translations[self.lang]['txt5'], font_name='Font')
+        plain_load_btn = Button(text=self.translations[self.lang]['txt6'], font_name='Font')
+        load_btn = Button(text=self.translations[self.lang]['txt7'], font_name='Font')
         plain_load_btn.bind(on_press=self.load_plain_memo)
-        delete_btn = Button(text='삭제', font_name='Font')
+        delete_btn = Button(text=self.translations[self.lang]['txt8'], font_name='Font')
 
         save_btn.bind(on_press=self.save_memo)
         load_btn.bind(on_press=self.load_memo)
         delete_btn.bind(on_press=self.delete_memo)
 
         btn_layout.add_widget(save_btn)
-        btn_layout.add_widget(load_btn)
         btn_layout.add_widget(plain_load_btn)
+        btn_layout.add_widget(load_btn)
+        
         btn_layout.add_widget(delete_btn)
 
         layout.add_widget(btn_layout)
 
-
+        
         self.status_label = Label(text='', size_hint_y=None, height=dp(30), font_name='Font')
         layout.add_widget(self.status_label)
 
         
+        
         back_button = Button(
-            text='← 뒤로가기',
+            text=self.translations[self.lang]['txt9'],
             font_name='Font',
             font_size=sp(20),
             size_hint=(1, None),
@@ -846,6 +1104,7 @@ class MemoScreen(Screen):
 
         self.add_widget(layout)
 
+        
         try:
             from android.storage import app_storage_path
             memo_base_path = app_storage_path()
@@ -860,12 +1119,15 @@ class MemoScreen(Screen):
 
 
         
+
+        
+        
     def get_memo_list(self):
         return sorted([f for f in os.listdir(self.memo_dir) if f.endswith('.txt')])
 
     def save_memo(self, instance):
         if not self.current_filename:
-            self.status_label.text = '저장 실패: 메모 파일이 선택되지 않았습니다.'
+            self.status_label.text = self.translations[self.lang]['txt10']
             return
         filepath = os.path.join(self.memo_dir, self.current_filename)
 
@@ -873,47 +1135,47 @@ class MemoScreen(Screen):
         with open(filepath, 'wb') as f:
             f.write(encrypted)
 
-        self.status_label.text = f'암호화 저장됨: {self.current_filename}'
+        self.status_label.text = f'{self.translations[self.lang]['txt11']} {self.current_filename}'
 
     def load_memo(self, instance):
         if not self.current_filename:
-            self.status_label.text = '불러오기 실패: 메모를 선택해주세요.'
+            self.status_label.text = self.translations[self.lang]['txt12']
             return
         filepath = os.path.join(self.memo_dir, self.current_filename)
         try:
             with open(filepath, 'rb') as f:
                 encrypted = f.read()
-                decrypted = self.cipher.decrypt(encrypted).decode('utf-8')
+                decrypted = self.cipher.decrypt(encrypted).decode('utf-8') 
                 self.memo_input.text = decrypted
-                self.status_label.text = f'불러오기 (복호화 완료): {self.current_filename}'
+                self.status_label.text = f'{self.translations[self.lang]['txt13']} {self.current_filename}'
         except Exception as e:
-            self.status_label.text = f'불러오기 실패: {str(e)}'
+            self.status_label.text = f'{self.translations[self.lang]['txt14']} {str(e)}'
             
     def load_plain_memo(self, instance):
         if not self.current_filename:
-            self.status_label.text = '불러오기 실패: 메모를 선택해주세요.'
+            self.status_label.text = self.translations[self.lang]['txt15']
             return
         filepath = os.path.join(self.memo_dir, self.current_filename)
         try:
             with open(filepath, 'rb') as f:
                 raw_data = f.read()
-                self.memo_input.text = raw_data.decode('utf-8', errors='replace')  
-                self.status_label.text = f'불러오기 (암호화된 원본): {self.current_filename}'
+                self.memo_input.text = raw_data.decode('utf-8', errors='replace') 
+                self.status_label.text = f'{self.translations[self.lang]['txt16']} {self.current_filename}'
         except Exception as e:
-            self.status_label.text = f'불러오기 실패: {str(e)}'
+            self.status_label.text = f'{self.translations[self.lang]['txt17']} {str(e)}'
         
     def delete_memo(self, instance):
         if not self.current_filename:
-            self.status_label.text = '삭제 실패: 메모를 선택해주세요.'
+            self.status_label.text = self.translations[self.lang]['txt18']
             return
 
-        # 확인 팝업 구성
+        
         content = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
-        message = Label(text=f"'{self.current_filename}' 메모를 삭제하시겠습니까?", font_name='Font')
+        message = Label(text=f"'{self.current_filename}' {self.translations[self.lang]['txt19']}", font_name='Font')
         btn_box = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(10))
 
-        yes_btn = Button(text='삭제', font_name='Font')
-        no_btn = Button(text='취소', font_name='Font')
+        yes_btn = Button(text=self.translations[self.lang]['txt8'], font_name='Font')
+        no_btn = Button(text=self.translations[self.lang]['txt20'], font_name='Font')
 
         popup = Popup(title='delete',
                       content=content,
@@ -924,18 +1186,18 @@ class MemoScreen(Screen):
             filepath = os.path.join(self.memo_dir, self.current_filename)
             if os.path.exists(filepath):
                 os.remove(filepath)
-                self.status_label.text = f'삭제됨: {self.current_filename}'
+                self.status_label.text = f'{self.translations[self.lang]['txt21']} {self.current_filename}'
                 self.memo_input.text = ''
                 self.title_input.text = ''
                 self.current_filename = None
                 self.memo_spinner.values = self.get_memo_list()
-                self.memo_spinner.text = '메모 선택'
+                self.memo_spinner.text = self.translations[self.lang]['txt22']
             else:
-                self.status_label.text = '삭제 완료.'
+                self.status_label.text = self.translations[self.lang]['txt23']
             popup.dismiss()
 
         def cancel_delete(instance):
-            self.status_label.text = '삭제 취소됨'
+            self.status_label.text = self.translations[self.lang]['txt24']
             popup.dismiss()
 
         yes_btn.bind(on_press=confirm_delete)
@@ -956,6 +1218,7 @@ class MemoScreen(Screen):
         filename = f'{title}.txt'
         filepath = os.path.join(self.memo_dir, filename)
         
+        # 중복 파일명 방지
         counter = 1
         while os.path.exists(filepath):
             filename = f'{title}_{counter}.txt'
@@ -969,7 +1232,7 @@ class MemoScreen(Screen):
 
         self.memo_spinner.values = self.get_memo_list()
         self.memo_spinner.text = filename
-        self.status_label.text = f'새 메모 생성: {filename}'
+        self.status_label.text = f'{self.translations[self.lang]['txt25']} {filename}'
 
     def select_memo(self, spinner, text):
         self.current_filename = text
@@ -987,10 +1250,35 @@ class MemoScreen(Screen):
 
 
 
+
+
 class LottoApp(App):
     def build(self):
         self.sm = ScreenManager()
-        self.sm.add_widget(MainScreen(name='main'))
+        
+        # OS 언어 감지 함수
+        def detect_language():
+            if platform == 'android':
+                Locale = autoclass('java.util.Locale')
+                language_code = Locale.getDefault().getLanguage()
+                if language_code in ('ko', 'en'):
+                    return language_code
+                return 'en'
+            else:
+                import locale
+                lang, _ = locale.getdefaultlocale()
+                if lang:
+                    code = lang.split('_')[0]
+                    if code in ('en', 'ko'):
+                        return code
+                return 'en' 
+        
+        lang = detect_language()
+        self.lang = lang  
+        
+        
+        self.sm.add_widget(MainScreen(name='main', lang=lang))
+        
         self.title = "SecretDecoder"
 
         if platform == 'android':
@@ -1000,10 +1288,11 @@ class LottoApp(App):
 
     def switch_to_screen(self, screen_name):
         if not self.sm.has_screen(screen_name):
+            lang = self.lang  
             if screen_name == 'encry':
-                self.sm.add_widget(CipherApp(name='encry'))
+                self.sm.add_widget(CipherApp(name='encry', lang=lang))  
             elif screen_name == 'memo':
-                self.sm.add_widget(MemoScreen(name='memo')) 
+                self.sm.add_widget(MemoScreen(name='memo', lang=lang))  
         self.sm.current = screen_name
         
     def on_back_button(self, window, key, *args):

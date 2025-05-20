@@ -14,7 +14,7 @@ jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256   -keystore my-relea
 
 cd .buildozer/android/platform/build-arm64*/dists/encry*/ 
 여기로 이동하고
-./gradlew bundleRelease
+./gradlew bundleRelease (이걸로 어찌어찌 출시됨. )
 로 빌드한다.
 (청소는  ./gradlew clean)
 
