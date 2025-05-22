@@ -1,5 +1,11 @@
-플레이스토어 정식 출시 
-https://play.google.com/store/apps/details?id=org.encrycode.encrycode
+# 🎉 정식 출시 🎉
+
+앱이 플레이스토어에 정식 출시되었습니다!  
+아래 링크에서 다운로드할 수 있습니다.
+
+➡️ [플레이스토어에서 다운로드](https://play.google.com/store/apps/details?id=org.encrycode.encrycode)
+
+
 
 ## 📜 라이선스
 
