@@ -1,3 +1,6 @@
+플레이스토어 정식 출시 
+https://play.google.com/store/apps/details?id=org.encrycode.encrycode
+
 ## 📜 라이선스
 
 본 프로젝트의 소스코드는 공개되어 있지만, **비상업적 열람용**으로만 제공됩니다.  
