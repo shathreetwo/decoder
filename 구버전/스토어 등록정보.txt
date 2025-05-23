@@ -1,0 +1,90 @@
+🇰🇷 한국어 설명 (ko-KR)
+📌 앱 이름
+암호 해독기
+
+📌 간단한 설명 (80자 이내)
+텍스트를 다양한 방식으로 암호화·복호화하는 강력한 보안 도구
+
+📌 자세한 설명
+**암호 해독기(SecretDecoder)**는 텍스트를 다양한 알고리즘으로 암호화하고 해독할 수 있는 보안 도구입니다.
+
+전문적인 암호화 기능부터 고전 암호까지 폭넓게 제공하며, 간단한 메모장 기능과 다국어 지원도 갖추고 있습니다.
+
+🔐 지원 암호화 알고리즘
+
+대칭키: ChaCha20, AES, Blowfish, 3DES, DES
+
+비대칭키: RSA
+
+해시 함수: BLAKE2, SHA-512, SHA-256, SHA-1, MD5
+
+고전 암호: Caesar, Reverse, Vigenère
+
+인코딩: ASCII, Hex, Unicode, Base64, URL
+
+📝 보안 메모장
+
+텍스트 기록 및 저장
+
+제목/내용 입력 가능
+
+커서 오류, 줄바꿈 문제 수정
+
+🌐 다국어 지원
+
+한국어 또는 영어 자동 표시
+
+⚙️ 기타 기능
+
+간단한 UI로 누구나 쉽게 사용
+
+오프라인에서도 완전 작동
+
+
+개인 정보 보호, 보안 학습, 개발 테스트 등 다양한 목적에 적합합니다.
+이제 손쉽게 텍스트를 보호하세요!
+
+🌐 영어 설명 (en-US)
+📌 App name
+SecretDecoder
+
+📌 Short description (80 characters max)
+Encrypt and decrypt text using various algorithms. Simple & secure.
+
+📌 Full description
+SecretDecoder is a powerful and easy-to-use tool for encrypting and decrypting text using a variety of cryptographic algorithms.
+
+Whether you're learning about security, protecting personal data, or just experimenting, SecretDecoder offers the tools you need.
+
+🔐 Supported Algorithms
+
+Symmetric Encryption: ChaCha20, AES, Blowfish, 3DES, DES
+
+Asymmetric Encryption: RSA
+
+Hash Functions: BLAKE2, SHA-512, SHA-256, SHA-1, MD5
+
+Classical Ciphers: Caesar, Reverse, Vigenère
+
+Encodings: ASCII, Hex, Unicode, Base64, URL
+
+📝 Secure Notepad
+
+Save encrypted notes
+
+Editable titles and content
+
+Fixed keyboard/line break bugs
+
+🌍 Multilingual Support
+
+Automatically displays UI in English or Korean
+
+⚙️ Features
+
+Lightweight and offline-friendly
+
+User-friendly design
+
+
+Try SecretDecoder now and take control of your text security!
